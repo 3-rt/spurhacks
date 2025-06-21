@@ -183,11 +183,18 @@
             </div>
         </div>
         
+        <div style="margin-bottom: 16px;">
+            <input type="text" id="user-instructions" placeholder="Enter your web automation instructions..." style="width: 60%; padding: 8px; font-size: 16px;">
+            <button id="start-automation" style="padding: 8px 16px; font-size: 16px;">Start Automation</button>
+        </div>
+        
         <div class="output-section">
             <h3>📺 Stagehand YouTube Automation Output:</h3>
             <textarea id="outputBox" class="text-box" placeholder="Stagehand and Gemini AI output will appear here..." readonly></textarea>
             <button id="clearButton" class="clear-button">Clear Output</button>
         </div>
+        
+        <div id="output-area" style="white-space: pre-wrap; background: #222; color: #eee; padding: 16px; border-radius: 8px; min-height: 200px;"></div>
     </div>
 
     <script>
@@ -197,6 +204,9 @@
         const statusButton = document.getElementById('statusButton');
         const outputBox = document.getElementById('outputBox');
         const clearButton = document.getElementById('clearButton');
+        const btn = document.getElementById('start-automation');
+        const input = document.getElementById('user-instructions');
+        const outputArea = document.getElementById('output-area');
 
         // Initialize the app
         async function initializeApp() {
@@ -284,6 +294,19 @@
         // Listen for Stagehand status updates
         window.electronAPI.onStagehandStatus((status) => {
             addOutput(`📡 Status: ${status}`);
+        });
+
+        // Add event listener for the button
+        btn.addEventListener('click', async () => {
+            const instructions = input.value.trim();
+            if (!instructions) {
+                outputArea.textContent = 'Please enter instructions.';
+                return;
+            }
+            outputArea.textContent = 'Running automation...';
+            // Use the exposed API from preload.js
+            const result = await window.stagehand.startAutomation(instructions);
+            outputArea.textContent = result;
         });
 
         // Initialize the app when the page loads

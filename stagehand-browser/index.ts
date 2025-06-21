@@ -27,15 +27,43 @@ async function main({
     context: BrowserContext; // Playwright BrowserContext
     stagehand: Stagehand; // Stagehand instance
 }) {
-    await stagehand.page.goto("https://www.google.com");
+    try {
+        // Get user query from environment variable
+        const userQuery = process.env.USER_QUERY || "go to yahoo finance, find the stock price of Nvidia, and return the price in USD";
+        
+        console.log(chalk.blue(`🎬 Starting AI automation for: "${userQuery}"`));
+        
+        // Create a single web agent that can handle any task
+        const agent = stagehand.agent({
+            instructions: `You are a helpful web assistant that can use a browser to complete any task the user requests.\nYou can navigate to any website, search for information, find images, videos, links, or any other content.\nWhen the user asks to save links, extract and clearly present all relevant URLs.\nBe thorough and complete the entire task from start to finish.\nDo not ask the user for any information, just use the browser to complete the task.`,
+        });
 
-    const agent = stagehand.agent({
-        // Customize the system prompt
-        instructions: `You are a helpful assistant that can use a web browser.
-	Do not ask follow up questions, the user will trust your judgement.`,
-    });
-
-    await agent.execute("go to yahoo finance, find the stock price of Nvidia, and return the price in USD");
+        // Execute the user's query with the agent
+        const result = await agent.execute(userQuery);
+        
+        console.log(chalk.yellow("🤖 Agent Result:"));
+        console.log(result);
+        
+        // Take a screenshot of the final results
+        await page.screenshot({ 
+            path: "automation-results.png",
+            fullPage: false 
+        });
+        console.log(chalk.green("📸 Screenshot saved as automation-results.png"));
+        
+        return {
+            success: true,
+            userQuery,
+            agentResult: result
+        };
+        
+    } catch (error) {
+        console.error(chalk.red("❌ Error during AI automation:"), error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : String(error)
+        };
+    }
 }
 
 /**

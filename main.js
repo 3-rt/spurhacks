@@ -24,17 +24,17 @@ function createMainWindow() {
 }
 
 // IPC handlers for communication with renderer
-ipcMain.handle('start-stagehand-youtube', async (event) => {
+ipcMain.handle('start-stagehand-youtube', async (event, userQuery) => {
     try {
-        console.log('Starting Stagehand YouTube automation...');
-        
-        // Send status update to renderer
-        mainWindow.webContents.send('stagehand-status', 'Starting Stagehand YouTube automation...');
-        
-        // Run the Stagehand app
+        console.log('Starting Stagehand automation with user query:', userQuery);
+        mainWindow.webContents.send('stagehand-status', `Starting AI automation for: ${userQuery}`);
         const stagehandProcess = spawn('npm', ['start'], {
             cwd: path.join(__dirname, 'stagehand-browser'),
-            stdio: ['pipe', 'pipe', 'pipe']
+            stdio: ['pipe', 'pipe', 'pipe'],
+            env: {
+                ...process.env,
+                USER_QUERY: userQuery
+            }
         });
 
         let output = '';

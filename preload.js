@@ -21,4 +21,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     removeAllListeners: (channel) => {
         ipcRenderer.removeAllListeners(channel);
     }
+});
+
+contextBridge.exposeInMainWorld('stagehand', {
+  startAutomation: async (instructions) => {
+    // Send instructions to main process and wait for result
+    try {
+      const result = await ipcRenderer.invoke('start-stagehand-youtube', instructions);
+      return result && result.output ? result.output : 'No output.';
+    } catch (err) {
+      return 'Error: ' + (err.message || err);
+    }
+  }
 }); 
