@@ -4,6 +4,7 @@
   "scripts": {
     "build": "tsc",
     "start": "tsx index.ts",
+    "server": "tsx persistent-server.ts",
     "postinstall": "playwright install"
   },
   "dependencies": {

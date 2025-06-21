@@ -1,7 +1,6 @@
-import { Stagehand, Page, BrowserContext } from "@browserbasehq/stagehand";
-import StagehandConfig from "./stagehand.config.js";
 import chalk from "chalk";
 import boxen from "boxen";
+import persistentClient from "./persistent-client.js";
 
 /**
  * 🤘 Welcome to Stagehand! Thanks so much for trying us out!
@@ -18,44 +17,17 @@ import boxen from "boxen";
  * - https://docs.browserbase.com/
  * - https://playwright.dev/docs/intro
  */
-async function main({
-    page,
-    context,
-    stagehand,
-}: {
-    page: Page; // Playwright Page with act, extract, and observe methods
-    context: BrowserContext; // Playwright BrowserContext
-    stagehand: Stagehand; // Stagehand instance
-}) {
+async function main(userQuery: string) {
     try {
-        // Get user query from environment variable
-        const userQuery = process.env.USER_QUERY || "go to yahoo finance, find the stock price of Nvidia, and return the price in USD";
-        
         console.log(chalk.blue(`🎬 Starting AI automation for: "${userQuery}"`));
         
-        // Create a single web agent that can handle any task
-        const agent = stagehand.agent({
-            instructions: `You are a helpful web assistant that can use a browser to compl
-ete any task the user requests.\nYou can navigate to any website, search for information, find images, videos, links, or any other content.\nWhen the user asks to save links, extract and clearly present all relevant URLs.\nBe thorough and complete the entire task from start to finish.\nDo not ask the user for any information, just use the browser to complete the task.`,        });
-
-        // Execute the user's query with the agent
-        const result = await agent.execute(userQuery);
+        // Initialize the persistent client if not already initialized
+        await persistentClient.initialize();
         
-        console.log(chalk.yellow("🤖 Agent Result:"));
-        console.log(result);
+        // Execute the user's query
+        const result = await persistentClient.executeQuery(userQuery);
         
-        // Take a screenshot of the final results
-        await page.screenshot({ 
-            path: "automation-results.png",
-            fullPage: false 
-        });
-        console.log(chalk.green("📸 Screenshot saved as automation-results.png"));
-        
-        return {
-            success: true,
-            userQuery,
-            agentResult: result
-        };
+        return result;
         
     } catch (error) {
         console.error(chalk.red("❌ Error during AI automation:"), error);
@@ -73,27 +45,34 @@ ete any task the user requests.\nYou can navigate to any website, search for inf
  *
  */
 async function run() {
-    const stagehand = new Stagehand({
-        ...StagehandConfig,
-    });
-    await stagehand.init();
-
-    const page = stagehand.page;
-    const context = stagehand.context;
-    const result = await main({
-        page,
-        context,
-        stagehand,
-    });
-    await stagehand.close();
-
+    // Get user query from environment variable
+    const userQuery = process.env.USER_QUERY || "go to yahoo finance, find the stock price of Nvidia, and return the price in USD";
+    
+    const result = await main(userQuery);
+    
+    // Don't close the browser - keep it open for future use
+    console.log(chalk.green("✅ Browser session kept open for future use"));
+    
     return result;
 }
 
 // Export for use in Electron
-export { run as runStagehand };
+export { run as runStagehand, persistentClient };
 
 // Run the app
 run();
+
+// Handle graceful shutdown
+process.on('SIGINT', async () => {
+    console.log(chalk.yellow("\n🔄 Shutting down gracefully..."));
+    await persistentClient.close();
+    process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+    console.log(chalk.yellow("\n🔄 Shutting down gracefully..."));
+    await persistentClient.close();
+    process.exit(0);
+});
 
 // test test 

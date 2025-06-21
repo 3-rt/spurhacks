@@ -4,6 +4,7 @@ const { spawn } = require("child_process")
 const fs = require("fs")
 const os = require("os")
 const Groq = require("groq-sdk")
+const http = require("http")
 
 // Load environment variables from .env file
 require('dotenv').config({ path: path.join(__dirname, 'stagehand-browser', '.env') })
@@ -19,6 +20,8 @@ const groq = new Groq({
 })
 
 let mainWindow
+let persistentServerProcess = null
+let serverPort = 3001
 
 function createWindow() {
   // Get screen size to position the window in top right
@@ -105,91 +108,201 @@ function createWindow() {
     mainWindow.setPosition(x, y)
   })
 
-  // Stagehand integration
+  // Stagehand integration with persistent server
   ipcMain.handle("execute-stagehand", async (event, userQuery) => {
     try {
       console.log("Executing Stagehand with query:", userQuery)
       
-      // Set the environment variable for the user query
-      process.env.USER_QUERY = userQuery
+      // Ensure the persistent server is running
+      await ensurePersistentServer()
       
-      // Run the Stagehand script using npm with shell option for better cross-platform support
+      // Send request to persistent server using SSE
       return new Promise((resolve, reject) => {
-        const stagehandProcess = spawn("npm", ["run", "start"], {
-          cwd: path.join(__dirname, "stagehand-browser"),
-          env: { 
-            ...process.env, 
-            USER_QUERY: userQuery
-          },
-          shell: true, // Use shell for better cross-platform support
-          stdio: ['pipe', 'pipe', 'pipe']
-        })
+        const postData = JSON.stringify({ query: userQuery })
         
-        let output = ""
-        let errorOutput = ""
-        
-        stagehandProcess.stdout.on("data", (data) => {
-          const newOutput = data.toString()
-          output += newOutput
-          console.log("Stagehand output:", newOutput)
-          
-          // Send real-time updates to the frontend
-          mainWindow.webContents.send("stagehand-stream", {
-            type: "output",
-            data: newOutput,
-            isComplete: false
-          })
-        })
-        
-        stagehandProcess.stderr.on("data", (data) => {
-          const newError = data.toString()
-          errorOutput += newError
-          console.error("Stagehand error:", newError)
-          
-          // Send error updates to the frontend
-          mainWindow.webContents.send("stagehand-stream", {
-            type: "error",
-            data: newError,
-            isComplete: false
-          })
-        })
-        
-        stagehandProcess.on("close", (code) => {
-          if (code === 0) {
-            // Send completion signal
-            mainWindow.webContents.send("stagehand-stream", {
-              type: "complete",
-              data: output,
-              isComplete: true,
-              success: true
-            })
-            resolve({ success: true, output: output, error: null })
-          } else {
-            // Send error completion signal
-            mainWindow.webContents.send("stagehand-stream", {
-              type: "complete",
-              data: errorOutput,
-              isComplete: true,
-              success: false
-            })
-            reject(new Error(`Stagehand process exited with code ${code}: ${errorOutput}`))
+        const options = {
+          hostname: 'localhost',
+          port: serverPort,
+          path: '/execute',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(postData)
           }
+        }
+        
+        const req = http.request(options, (res) => {
+          let buffer = ''
+          
+          res.on('data', (chunk) => {
+            buffer += chunk.toString()
+            
+            // Process SSE data
+            const lines = buffer.split('\n')
+            buffer = lines.pop() || '' // Keep incomplete line in buffer
+            
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6))
+                  
+                  // Send updates to frontend based on type
+                  switch (data.type) {
+                    case 'connected':
+                      mainWindow.webContents.send("stagehand-stream", {
+                        type: "output",
+                        data: data.message,
+                        isComplete: false
+                      })
+                      break
+                      
+                    case 'start':
+                      mainWindow.webContents.send("stagehand-stream", {
+                        type: "output",
+                        data: data.message,
+                        isComplete: false
+                      })
+                      break
+                      
+                    case 'output':
+                      mainWindow.webContents.send("stagehand-stream", {
+                        type: "output",
+                        data: data.data,
+                        isComplete: false
+                      })
+                      break
+                      
+                    case 'error':
+                      mainWindow.webContents.send("stagehand-stream", {
+                        type: "error",
+                        data: data.data,
+                        isComplete: false
+                      })
+                      break
+                      
+                    case 'status':
+                      mainWindow.webContents.send("stagehand-stream", {
+                        type: "output",
+                        data: data.message,
+                        isComplete: false
+                      })
+                      break
+                      
+                    case 'complete':
+                      if (data.success) {
+                        mainWindow.webContents.send("stagehand-stream", {
+                          type: "complete",
+                          data: JSON.stringify(data.result, null, 2),
+                          isComplete: true,
+                          success: true
+                        })
+                        resolve(data.result)
+                      } else {
+                        mainWindow.webContents.send("stagehand-stream", {
+                          type: "complete",
+                          data: data.error,
+                          isComplete: true,
+                          success: false
+                        })
+                        reject(new Error(data.error))
+                      }
+                      break
+                  }
+                } catch (parseError) {
+                  console.error("Error parsing SSE data:", parseError)
+                }
+              }
+            }
+          })
+          
+          res.on('end', () => {
+            // Handle any remaining data
+            if (buffer.trim()) {
+              const lines = buffer.split('\n')
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  try {
+                    const data = JSON.parse(line.slice(6))
+                    if (data.type === 'complete') {
+                      if (data.success) {
+                        resolve(data.result)
+                      } else {
+                        reject(new Error(data.error))
+                      }
+                    }
+                  } catch (parseError) {
+                    console.error("Error parsing final SSE data:", parseError)
+                  }
+                }
+              }
+            }
+          })
         })
         
-        stagehandProcess.on("error", (error) => {
-          // Send error completion signal
-          mainWindow.webContents.send("stagehand-stream", {
-            type: "complete",
-            data: error.message,
-            isComplete: true,
-            success: false
-          })
+        req.on('error', (error) => {
+          console.error("Error communicating with persistent server:", error)
           reject(error)
         })
+        
+        req.write(postData)
+        req.end()
       })
+      
     } catch (error) {
       console.error("Error executing Stagehand:", error)
       return { success: false, output: null, error: error.message }
+    }
+  })
+
+  // Initialize persistent browser session
+  ipcMain.handle("initialize-browser", async (event) => {
+    try {
+      console.log("Initializing persistent browser session...")
+      await ensurePersistentServer()
+      return { success: true, message: "Browser session initialized" }
+    } catch (error) {
+      console.error("Error initializing browser:", error)
+      return { success: false, output: null, error: error.message }
+    }
+  })
+
+  // Close browser session
+  ipcMain.handle("close-browser", async (event) => {
+    try {
+      console.log("Closing browser session...")
+      
+      if (persistentServerProcess) {
+        // Send close request to server
+        const postData = JSON.stringify({})
+        const options = {
+          hostname: 'localhost',
+          port: serverPort,
+          path: '/close',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(postData)
+          }
+        }
+        
+        const req = http.request(options, () => {
+          // Kill the process after a short delay
+          setTimeout(() => {
+            if (persistentServerProcess) {
+              persistentServerProcess.kill('SIGTERM')
+              persistentServerProcess = null
+            }
+          }, 1000)
+        })
+        
+        req.write(postData)
+        req.end()
+      }
+      
+      return { success: true, message: "Browser session closed" }
+    } catch (error) {
+      console.error("Error closing browser:", error)
+      return { success: false, error: error.message }
     }
   })
 
@@ -268,6 +381,12 @@ function createWindow() {
 app.whenReady().then(createWindow)
 
 app.on("window-all-closed", () => {
+  // Close persistent server before quitting
+  if (persistentServerProcess) {
+    console.log("Closing persistent server...")
+    persistentServerProcess.kill('SIGTERM')
+  }
+  
   if (process.platform !== "darwin") {
     app.quit()
   }
@@ -278,3 +397,107 @@ app.on("activate", () => {
     createWindow()
   }
 })
+
+// Handle app quit
+app.on("before-quit", () => {
+  if (persistentServerProcess) {
+    console.log("Closing persistent server...")
+    persistentServerProcess.kill('SIGTERM')
+  }
+})
+
+// Helper function to ensure persistent server is running
+async function ensurePersistentServer() {
+  if (persistentServerProcess) {
+    // Check if server is still running
+    try {
+      const status = await checkServerStatus()
+      if (status.isReady) {
+        return
+      }
+    } catch (error) {
+      console.log("Server not responding, restarting...")
+    }
+  }
+  
+  // Start the persistent server
+  console.log("Starting persistent server...")
+  persistentServerProcess = spawn("npm", ["run", "server"], {
+    cwd: path.join(__dirname, "stagehand-browser"),
+    env: { ...process.env },
+    shell: true,
+    stdio: ['pipe', 'pipe', 'pipe']
+  })
+  
+  persistentServerProcess.stdout.on("data", (data) => {
+    const output = data.toString()
+    console.log("Persistent server:", output)
+    
+    // Check if server is ready
+    if (output.includes("🌐 Server listening on port")) {
+      const portMatch = output.match(/port (\d+)/)
+      if (portMatch) {
+        serverPort = parseInt(portMatch[1])
+        console.log(`Server ready on port ${serverPort}`)
+      }
+    }
+  })
+  
+  persistentServerProcess.stderr.on("data", (data) => {
+    console.error("Persistent server error:", data.toString())
+  })
+  
+  // Wait for server to be ready
+  let attempts = 0
+  while (attempts < 30) {
+    try {
+      const status = await checkServerStatus()
+      if (status.isReady) {
+        console.log("Persistent server is ready")
+        return
+      }
+    } catch (error) {
+      // Server not ready yet
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    attempts++
+  }
+  
+  throw new Error("Failed to start persistent server")
+}
+
+// Helper function to check server status
+function checkServerStatus() {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'localhost',
+      port: serverPort,
+      path: '/status',
+      method: 'GET'
+    }
+    
+    const req = http.request(options, (res) => {
+      let data = ''
+      
+      res.on('data', (chunk) => {
+        data += chunk
+      })
+      
+      res.on('end', () => {
+        try {
+          const result = JSON.parse(data)
+          resolve(result)
+        } catch (error) {
+          reject(error)
+        }
+      })
+    })
+    
+    req.on('error', (error) => {
+      reject(error)
+    })
+    
+    req.end()
+  })
+}
