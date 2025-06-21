@@ -522,8 +522,34 @@ body {
   }
 }
 
+@keyframes typewriter {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes blink {
+  0%, 50% {
+    border-color: transparent;
+  }
+  51%, 100% {
+    border-color: #64748b;
+  }
+}
+
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-typewriter {
+  animation: typewriter 0.1s steps(1) infinite;
+}
+
+.animate-blink {
+  animation: blink 1s infinite;
 }
 
 /* Scrollbar styling */
@@ -556,4 +582,22 @@ body {
 .flex-1.flex.flex-col.overflow-hidden {
   min-height: 0;
   flex: 1 1 0%;
+}
+
+/* Streaming text styles */
+.streaming-text {
+  white-space: pre-wrap;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: #cbd5e1;
+}
+
+/* Webkit app region for window dragging */
+.webkit-app-region-drag {
+  -webkit-app-region: drag;
+}
+
+.webkit-app-region-no-drag {
+  -webkit-app-region: no-drag;
 } 

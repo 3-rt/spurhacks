@@ -1,5 +1,3 @@
-const { ipcRenderer } = require("electron")
-
 // DOM elements
 const compactBox = document.getElementById("compact-box")
 const agentContainer = document.getElementById("agent-container")
@@ -23,7 +21,7 @@ function initApp() {
 // Expand the window and show agent interface
 function expandWindow() {
   isExpanded = true
-  ipcRenderer.invoke("expand-window").then(() => {
+  window.electronAPI.expandWindow().then(() => {
     compactBox.classList.add("opacity-0", "pointer-events-none")
     agentContainer.classList.remove("opacity-0", "pointer-events-none")
     agentContainer.classList.add("opacity-100", "pointer-events-auto")
@@ -33,7 +31,7 @@ function expandWindow() {
 // Collapse the window and show compact box
 function collapseWindow() {
   isExpanded = false
-  ipcRenderer.invoke("collapse-window").then(() => {
+  window.electronAPI.collapseWindow().then(() => {
     compactBox.classList.remove("opacity-0", "pointer-events-none")
     agentContainer.classList.remove("opacity-100", "pointer-events-auto")
     agentContainer.classList.add("opacity-0", "pointer-events-none")
@@ -59,7 +57,7 @@ function handleDrag(e) {
   const deltaY = e.clientY - dragStartY
   
   // Get current window position and update it
-  ipcRenderer.invoke("set-window-position", deltaX, deltaY)
+  window.electronAPI.setWindowPosition(deltaX, deltaY)
 }
 
 function stopDragging() {
@@ -78,27 +76,36 @@ document.addEventListener("keydown", (e) => {
 // Event listeners
 boxContent.addEventListener("mousedown", startDragging)
 
+// Add click event to expand window when clicking on compact box
+boxContent.addEventListener("click", (e) => {
+  // Only expand if not dragging
+  if (!isDragging) {
+    expandWindow()
+  }
+})
+
 // Window control buttons
 document.getElementById("collapse-btn").addEventListener("click", () => {
   collapseWindow()
 })
 
 document.getElementById("minimize-btn").addEventListener("click", () => {
-  ipcRenderer.invoke("window-minimize")
+  window.electronAPI.windowMinimize()
 })
 
 document.getElementById("maximize-btn").addEventListener("click", () => {
-  ipcRenderer.invoke("window-maximize")
+  window.electronAPI.windowMaximize()
 })
 
 document.getElementById("close-btn").addEventListener("click", () => {
-  ipcRenderer.invoke("window-close")
+  window.electronAPI.windowClose()
 })
 
 // Message input handling
-messageInput.addEventListener("keypress", (e) => {
+messageInput.addEventListener("keypress", async (e) => {
   if (e.key === "Enter" && messageInput.value.trim()) {
-    addMessage(messageInput.value.trim(), "user")
+    const userQuery = messageInput.value.trim()
+    addMessage(userQuery, "user")
     messageInput.value = ""
 
     // Add thinking section
@@ -106,10 +113,84 @@ messageInput.addEventListener("keypress", (e) => {
       addThinkingSection()
     }, 500)
 
-    // Simulate AI response after thinking
-    setTimeout(() => {
-      addMessage("I understand your request! Let me help you with that.", "assistant")
-    }, 3000)
+    try {
+      // Show loading state
+      const loadingMessage = addMessage("Executing your request...", "assistant")
+      
+      // Create a streaming message for real-time updates
+      const streamingMessage = addMessage("", "assistant")
+      let streamingContent = ""
+      
+      // Apply streaming text styles
+      const streamingTextElement = streamingMessage.querySelector(".flex-1")
+      streamingTextElement.classList.add("streaming-text")
+      
+      // Set up real-time streaming listener
+      const streamHandler = (data) => {
+        if (data.type === "output") {
+          streamingContent += data.data
+          streamingTextElement.textContent = streamingContent
+          scrollToBottom()
+        } else if (data.type === "error") {
+          streamingContent += `Error: ${data.data}`
+          streamingTextElement.textContent = streamingContent
+          scrollToBottom()
+        } else if (data.type === "complete") {
+          // Remove the streaming listener
+          window.electronAPI.removeAllListeners('stagehand-stream')
+          
+          if (data.success) {
+            streamingContent += "\n\n✅ Task completed successfully!"
+          } else {
+            streamingContent += "\n\n❌ Task failed"
+          }
+          streamingTextElement.textContent = streamingContent
+          scrollToBottom()
+        }
+      }
+      
+      // Start listening for streaming updates
+      window.electronAPI.onStagehandStream(streamHandler)
+      
+      // Execute Stagehand with the user's query
+      const result = await Promise.race([
+        window.stagehand.executeQuery(userQuery),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Request timed out")), 60000) // 60 second timeout
+        )
+      ])
+      
+      // Remove the thinking section
+      const thinkingSection = chatContainer.querySelector(".bg-slate-900\\/50")
+      if (thinkingSection) {
+        thinkingSection.remove()
+      }
+      
+      // Remove loading message
+      if (loadingMessage) {
+        loadingMessage.remove()
+      }
+      
+      // Clean up streaming listener if not already done
+      window.electronAPI.removeAllListeners('stagehand-stream')
+      
+      if (!result.success) {
+        // Add error message if streaming didn't handle it
+        addMessage(`Error: ${result.error || "Failed to execute task"}`, "assistant")
+      }
+    } catch (error) {
+      // Remove the thinking section
+      const thinkingSection = chatContainer.querySelector(".bg-slate-900\\/50")
+      if (thinkingSection) {
+        thinkingSection.remove()
+      }
+      
+      // Clean up streaming listener
+      window.electronAPI.removeAllListeners('stagehand-stream')
+      
+      // Add error message
+      addMessage(`Error: ${error.message || "Failed to execute task"}`, "assistant")
+    }
   }
 })
 
@@ -228,6 +309,7 @@ function addMessage(content, type) {
 
   chatContainer.appendChild(messageDiv)
   scrollToBottom()
+  return messageDiv
 }
 
 // Initialize the app
