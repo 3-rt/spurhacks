@@ -1,9 +1,8 @@
 # Dependencies
-/node_modules
-/stagehand-browser/node_modules
+**/node_modules
 
 # Stagehand-specific
-/stagehand-browser/.env
+**/.env
 /stagehand-browser/youtube-video.png
 
 # Build output
