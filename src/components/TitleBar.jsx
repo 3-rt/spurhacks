@@ -1,6 +1,14 @@
 import React from 'react';
 
 function TitleBar({ onCollapse }) {
+  const handleClose = () => {
+    window.electronAPI.windowClose();
+  };
+
+  const handleMaximize = () => {
+    window.electronAPI.windowMaximize();
+  };
+
   return (
     <div className="bg-slate-900/90 h-10 flex items-center webkit-app-region-drag border-b border-slate-800/50">
       <div className="w-full flex justify-between items-center px-4">
@@ -18,6 +26,16 @@ function TitleBar({ onCollapse }) {
           <button onClick={onCollapse} className="w-6 h-6 border-none bg-transparent text-slate-400 flex items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-slate-800/80 hover:text-slate-200 rounded-sm">
             <svg width="12" height="12" viewBox="0 0 12 12">
               <path d="M2 6L10 6" stroke="currentColor" strokeWidth="1"/>
+            </svg>
+          </button>
+          <button onClick={handleMaximize} className="w-6 h-6 border-none bg-transparent text-slate-400 flex items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-slate-800/80 hover:text-slate-200 rounded-sm">
+            <svg width="10" height="10" viewBox="0 0 10 10">
+              <path d="M1.5 1.5H8.5V8.5H1.5V1.5Z" stroke="currentColor" strokeWidth="1"/>
+            </svg>
+          </button>
+          <button onClick={handleClose} className="w-6 h-6 border-none bg-transparent text-red-400 flex items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-red-600/80 hover:text-white rounded-sm">
+            <svg width="12" height="12" viewBox="0 0 12 12">
+              <path d="M3 3L9 9M3 9L9 3" stroke="currentColor" strokeWidth="1"/>
             </svg>
           </button>
         </div>

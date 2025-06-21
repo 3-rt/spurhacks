@@ -40,7 +40,7 @@ function AgentDashboard() {
       </div>
 
       {/* Right Sidebar - COT Stream */}
-      <div className="w-80 border-l border-gray-800 bg-gray-950/50">
+      <div className="w-112 border-l border-gray-800 bg-gray-950/50">
         <div className="h-full p-4">
           <AgentCOTStream />
         </div>
