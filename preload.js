@@ -15,9 +15,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveAudioFile: (data) => ipcRenderer.invoke('save-audio-file', data),
     transcribeAudio: (filePath) => ipcRenderer.invoke('transcribe-audio', { filePath }),
     
-    // Stagehand YouTube automation
+    // Stagehand browser automation
+    initializeStagehand: () => ipcRenderer.invoke('initialize-stagehand'),
+    executeStagehandTask: (userQuery) => ipcRenderer.invoke('execute-stagehand-task', userQuery),
+    stopStagehandTask: () => ipcRenderer.invoke('stop-stagehand-task'),
+    
+    // Legacy Stagehand methods for backward compatibility
     startStagehandYouTube: () => ipcRenderer.invoke('start-stagehand-youtube'),
     checkStagehandStatus: () => ipcRenderer.invoke('check-stagehand-status'),
+    executeStagehand: (userQuery) => ipcRenderer.invoke('execute-stagehand', userQuery),
     
     // Listen for Stagehand output
     onStagehandOutput: (callback) => {
@@ -54,10 +60,10 @@ contextBridge.exposeInMainWorld('stagehand', {
   // New function to execute Stagehand with user query
   executeQuery: async (userQuery) => {
     try {
-      const result = await ipcRenderer.invoke('execute-stagehand', userQuery);
+      const result = await ipcRenderer.invoke('execute-stagehand-task', userQuery);
       return result;
     } catch (err) {
-      return { success: false, output: null, error: err.message };
+      return { success: false, agentResult: null, error: err.message };
     }
   }
 }); 

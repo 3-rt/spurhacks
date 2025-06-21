@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import AgentStats from './AgentStats';
 import OperationsList from './OperationsList';
 import BrowserWindow from './BrowserWindow';
-import ActivityFeed from './ActivityFeed';
+import AgentActivityFeed from './AgentActivityFeed';
 
 function AgentDashboard() {
   const [selectedAgent] = useState("agent 01");
@@ -42,7 +42,7 @@ function AgentDashboard() {
       {/* Right Sidebar */}
       <div className="w-80 border-l border-gray-800 bg-gray-950/50">
         <div className="h-full p-4">
-          <ActivityFeed />
+          <AgentActivityFeed />
         </div>
       </div>
     </div>

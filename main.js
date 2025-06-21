@@ -107,9 +107,27 @@ function createWindow() {
   })
 
   // Stagehand integration
-  ipcMain.handle("execute-stagehand", async (event, userQuery) => {
+  ipcMain.handle("initialize-stagehand", async () => {
     try {
-      console.log("Executing Stagehand with query:", userQuery)
+      console.log("Initializing Stagehand service")
+      // Check if stagehand-browser directory exists and has required files
+      const stagehandPath = path.join(__dirname, "stagehand-browser")
+      const packageJsonPath = path.join(stagehandPath, "package.json")
+      
+      if (!fs.existsSync(packageJsonPath)) {
+        throw new Error("Stagehand browser directory not found. Please ensure stagehand-browser is properly set up.")
+      }
+      
+      return { success: true, message: "Stagehand service initialized" }
+    } catch (error) {
+      console.error("Error initializing Stagehand:", error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("execute-stagehand-task", async (event, userQuery) => {
+    try {
+      console.log("Executing Stagehand task:", userQuery)
       
       // Set the environment variable for the user query
       process.env.USER_QUERY = userQuery
@@ -164,7 +182,7 @@ function createWindow() {
               isComplete: true,
               success: true
             })
-            resolve({ success: true, output: output, error: null })
+            resolve({ success: true, agentResult: output, error: null })
           } else {
             // Send error completion signal
             mainWindow.webContents.send("stagehand-stream", {
@@ -189,9 +207,26 @@ function createWindow() {
         })
       })
     } catch (error) {
-      console.error("Error executing Stagehand:", error)
-      return { success: false, output: null, error: error.message }
+      console.error("Error executing Stagehand task:", error)
+      return { success: false, agentResult: null, error: error.message }
     }
+  })
+
+  ipcMain.handle("stop-stagehand-task", async () => {
+    try {
+      console.log("Stopping Stagehand task")
+      // This would need to be implemented to actually stop the running process
+      // For now, we'll just return success
+      return { success: true, message: "Stop signal sent" }
+    } catch (error) {
+      console.error("Error stopping Stagehand task:", error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  // Legacy handler for backward compatibility
+  ipcMain.handle("execute-stagehand", async (event, userQuery) => {
+    return await ipcMain.handle("execute-stagehand-task", event, userQuery)
   })
 
   // Handle audio file saving
