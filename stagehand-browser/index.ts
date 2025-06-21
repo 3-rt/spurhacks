@@ -31,15 +31,14 @@ const MemoryManager = require("../memory-manager.js");
  * - https://playwright.dev/docs/intro
  */
 
-// Function to emit COT events to the frontend
-function emitCOTEvent(type: string, content: string, step?: number, details?: any) {
+// Function to emit real Stagehand output to the frontend
+function emitStagehandOutput(type: string, content: string, level: string = 'info') {
   const event = {
-    type: "cot",
+    type: "stagehand-output",
     data: {
       type,
       content,
-      step,
-      details,
+      level,
       timestamp: new Date().toISOString()
     }
   };
@@ -47,47 +46,88 @@ function emitCOTEvent(type: string, content: string, step?: number, details?: an
   // Send to stdout for Electron to capture
   console.log(JSON.stringify(event));
 }
+// Intercept console logs to capture Stagehand's real output
+function interceptStagehandLogs() {
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+    const originalInfo = console.info;
+  
+    console.log = (...args) => {
+      const message = args.join(' ');
+      
+      // Skip our own JSON events
+      if (!message.startsWith('{"type":')) {
+        // Parse Stagehand-specific logs
+        if (message.includes('INFO:') || message.includes('action:') || message.includes('reasoning:')) {
+          emitStagehandOutput('agent_action', message, 'info');
+        } else if (message.includes('ERROR:') || message.includes('error')) {
+          emitStagehandOutput('agent_error', message, 'error');
+        } else if (message.includes('DEBUG:') || message.includes('debug')) {
+          emitStagehandOutput('agent_debug', message, 'debug');
+        } else if (message.includes('modelName:') || message.includes('llm')) {
+          emitStagehandOutput('agent_llm', message, 'info');
+        } else {
+          emitStagehandOutput('agent_general', message, 'info');
+        }
+      }
+      
+      // Call original log
+      originalLog.apply(console, args);
+    };
+  
+    console.error = (...args) => {
+      const message = args.join(' ');
+      if (!message.startsWith('{"type":')) {
+        emitStagehandOutput('agent_error', message, 'error');
+      }
+      originalError.apply(console, args);
+    };
+  
+    console.warn = (...args) => {
+      const message = args.join(' ');
+      if (!message.startsWith('{"type":')) {
+        emitStagehandOutput('agent_warning', message, 'warn');
+      }
+      originalWarn.apply(console, args);
+    };
+  
+    console.info = (...args) => {
+      const message = args.join(' ');
+      if (!message.startsWith('{"type":')) {
+        emitStagehandOutput('agent_info', message, 'info');
+      }
+      originalInfo.apply(console, args);
+    };
+  
+}
 
-// Enhanced agent with COT logging and memory context
-async function createCOTAgent(stagehand: Stagehand, memoryContext: string = "", enhancedQuery: string = "") {
+// Enhanced agent with COT logging
+async function createCOTAgent(stagehand: Stagehand,memoryContext: string = "", enhancedQuery: string = "") {
   const agent = stagehand.agent({
     instructions: `You are a helpful web assistant that can use a browser to complete any task the user requests.
-
-🧠 MEMORY SYSTEM: You have access to previous actions and information. The memory system finds relevant past actions based on word overlap with your current request.
-
-MEMORY CONTEXT:${memoryContext}
-
-IMPORTANT INSTRUCTIONS:
-1. Use the memory context to understand what the user is referring to when they mention "same", "yesterday", "last week", "previous", or similar references
-2. If the memory shows specific details (names, symbols, locations, etc.), use those specific details in your search
-3. Always prioritize specific information from memory over generic searches
-4. If the user says "same" and memory shows specific details, use those details to make the search more specific
-5. If the user says "yesterday" or "last week", look at the memory context for what was done then
-6. Use the enhanced query if it's different from the original, otherwise use the original query but apply the memory context
-
-ORIGINAL QUERY: "${process.env.USER_QUERY || ''}"
-ENHANCED QUERY: "${enhancedQuery}"
-
-IMPORTANT: You must think through your process step by step and explain your reasoning as you go. Use the following format for your thinking:
-
-1. First, analyze the user's request and break it down into clear steps
-2. Plan your approach and identify what websites or tools you'll need
-3. Execute each step methodically, explaining what you're doing and why
-4. Handle any errors or unexpected situations gracefully
-5. Present your final results clearly
-
-You can navigate to any website, search for information, find images, videos, links, or any other content.
-When the user asks to save links, extract and clearly present all relevant URLs.
-Be thorough and complete the entire task from start to finish.
-Do not ask the user for any information, just use the browser to complete the task.
-
-Always think aloud and explain your reasoning process as you work.
-
-When you complete actions, make sure to extract and remember important details like:
-- URLs visited
-- Information found (prices, names, etc.)
-- Actions taken (orders placed, searches performed, etc.)
-- Any relevant context that might be useful for future requests`,
+    🧠 MEMORY SYSTEM: You have access to previous actions and information. The memory system finds relevant past actions based on word overlap with your current request.
+    MEMORY CONTEXT:${memoryContext}
+    IMPORTANT INSTRUCTIONS:
+    1. Use the memory context to understand what the user is referring to when they mention "same", "yesterday", "last week", "previous", or similar references
+    2. If the memory shows specific details (names, symbols, locations, etc.), use those specific details in your search
+    3. Always prioritize specific information from memory over generic searches
+    4. If the user says "same" and memory shows specific details, use those details to make the search more specific
+    5. If the user says "yesterday" or "last week", look at the memory context for what was done then
+    6. Use the enhanced query if it's different from the original, otherwise use the original query but apply the memory context
+    ORIGINAL QUERY: "${process.env.USER_QUERY || ''}"
+    ENHANCED QUERY: "${enhancedQuery}"
+    IMPORTANT: You must think through your process step by step and explain your reasoning as you go. Use the following format for your thinking:
+    1. First, analyze the user's request and break it down into clear steps
+    @@ -54,7 +81,13 @@ When the user asks to save links, extract and clearly present all relevant URLs.
+    Be thorough and complete the entire task from start to finish.
+    Do not ask the user for any information, just use the browser to complete the task.
+    Always think aloud and explain your reasoning process as you work.
+    When you complete actions, make sure to extract and remember important details like:
+    - URLs visited
+    - Information found (prices, names, etc.)
+    - Actions taken (orders placed, searches performed, etc.)
+    - Any relevant context that might be useful for future requests`,
   });
 
   // Override the execute method to add COT logging
@@ -96,30 +136,30 @@ When you complete actions, make sure to extract and remember important details l
   agent.execute = async (instructionOrOptions: string | any) => {
     const query = typeof instructionOrOptions === 'string' ? instructionOrOptions : instructionOrOptions.instruction || '';
     
-    emitCOTEvent("thinking_start", `Starting to think about: "${query}"`, 1);
+    emitStagehandOutput("thinking_start", `Starting to think about: "${query}"`, "info");
     
     try {
       // Emit thinking events during execution
-      emitCOTEvent("analyzing_request", `Breaking down the request into manageable steps`, 2);
+      emitStagehandOutput("analyzing_request", `Breaking down the request into manageable steps`, "info");
       
       // Add a small delay to simulate thinking
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      emitCOTEvent("planning_approach", `Planning the best approach to complete this task`, 3);
+      emitStagehandOutput("planning_approach", `Planning the best approach to complete this task`, "info");
       
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      emitCOTEvent("executing_steps", `Beginning step-by-step execution`, 4);
+      emitStagehandOutput("executing_steps", `Beginning step-by-step execution`, "info");
       
       // Execute the original method
       const result = await originalExecute(instructionOrOptions);
       
-      emitCOTEvent("execution_success", `Successfully completed all steps`, 5);
+      emitStagehandOutput("execution_success", `Successfully completed all steps`, "info");
       
       return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      emitCOTEvent("execution_error", `Error during execution: ${errorMessage}`, -1);
+      emitStagehandOutput("execution_error", `Error during execution: ${errorMessage}`, "error");
       throw error;
     }
   };
@@ -153,10 +193,10 @@ async function main({
         if (relevantMemories.length > 0) {
             console.log(chalk.cyan(`🧠 Found ${relevantMemories.length} relevant memories with word overlap:`));
             
-            // Use the new memory-based enhancement
+            // Use the memory-based enhancement
             enhancedQuery = await memoryManager.enhanceQueryWithMemories(userQuery, relevantMemories);
             
-            // Create a simple memory context
+            // Create memory context for the agent
             memoryContext = "\n\n🧠 MEMORY CONTEXT - Previous actions that match your request:\n";
             
             for (const memory of relevantMemories) {
@@ -188,22 +228,23 @@ async function main({
             console.log(chalk.yellow("🧠 No relevant memories found for this query"));
         }
         
-        // Emit initial COT event
-        emitCOTEvent("task_start", `Starting AI automation for: "${userQuery}"`, 1);
+        interceptStagehandLogs();
+        
+        emitStagehandOutput('task_start', `🎬 Starting AI automation for: "${userQuery}"`, 'info');
         
         // Create a single web agent that can handle any task with enhanced COT instructions and memory context
         const agent = await createCOTAgent(stagehand, memoryContext, enhancedQuery);
 
         // Emit COT event for agent creation
-        emitCOTEvent("agent_created", "Web automation agent initialized and ready to execute task", 2);
+        emitStagehandOutput("agent_created", "Web automation agent initialized and ready to execute task", "info");
 
-        // Execute the enhanced query with the agent
-        emitCOTEvent("execution_start", "Beginning task execution with step-by-step reasoning", 3);
+        // Execute the enhanced query with the agent - this will generate real Stagehand logs
+        emitStagehandOutput('execution_start', '🚀 Beginning task execution...', 'info');
         
         const result = await agent.execute(enhancedQuery);
         
         // Emit completion COT event
-        emitCOTEvent("execution_complete", "Task execution completed successfully", 4);
+        emitStagehandOutput("execution_complete", "Task execution completed successfully", "info");
         
         console.log(chalk.yellow("🤖 Agent Result:"));
         console.log(result);
@@ -224,41 +265,14 @@ async function main({
                 relatedQueries: [enhancedQuery]
             };
             
-            // Add to memory using the simple method
-            const allMemories = await memoryManager.getAllMemories();
-            const newMemory = {
-                id: `mem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                timestamp: new Date().toISOString(),
-                ...actionMemory
-            };
-            
-            // Read current memory file using proper ES module path
-            const fs = require('fs').promises;
-            const memoryPath = path.join(__dirname, '..', 'public', 'memory.json');
-            let memoryData;
-            try {
-                const data = await fs.readFile(memoryPath, 'utf-8');
-                memoryData = JSON.parse(data);
-            } catch (error) {
-                memoryData = {
-                    entries: [],
-                    lastUpdated: new Date().toISOString(),
-                    version: "1.0.0"
-                };
-            }
-            
-            memoryData.entries.push(newMemory);
-            memoryData.lastUpdated = new Date().toISOString();
-            
-            await fs.writeFile(memoryPath, JSON.stringify(memoryData, null, 2));
+            // Add to memory using the memory manager
+            await memoryManager.addMemory(actionMemory);
             console.log(chalk.blue(`💾 Memory saved: ${actionMemory.description}`));
             
             // If the result contains specific information, store it separately
             const resultString = String(result || '');
             if (resultString.length > 0) {
                 const infoMemory = {
-                    id: `mem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    timestamp: new Date().toISOString(),
                     type: "information",
                     category: "general",
                     description: `Information from: ${enhancedQuery}`,
@@ -271,8 +285,8 @@ async function main({
                     relatedQueries: [enhancedQuery]
                 };
                 
-                memoryData.entries.push(infoMemory);
-                await fs.writeFile(memoryPath, JSON.stringify(memoryData, null, 2));
+                await memoryManager.addMemory(infoMemory);
+                console.log(chalk.blue(`💾 Information memory saved: ${infoMemory.description}`));
             }
             
         } catch (memoryError) {
@@ -282,19 +296,18 @@ async function main({
         }
         
         // Take a screenshot of the final results
-        emitCOTEvent("screenshot", "Taking screenshot of final results", 5);
+        emitStagehandOutput('screenshot', '📸 Taking screenshot of final results...', 'info');
         await page.screenshot({ 
             path: "automation-results.png",
             fullPage: false 
         });
-        console.log(chalk.green("📸 Screenshot saved as automation-results.png"));
+        emitStagehandOutput('screenshot_saved', '📸 Screenshot saved as automation-results.png', 'info');
         
         // Display memory statistics
         const stats = await memoryManager.getMemoryStats();
         console.log(chalk.cyan(`📊 Memory Stats: ${stats.total} total entries`));
         
-        // Emit final COT event
-        emitCOTEvent("task_complete", `Task completed successfully. Result: ${result}`, 6);
+        emitStagehandOutput('task_complete', `🎉 Task completed successfully!`, 'info');
         
         return {
             success: true,
@@ -305,10 +318,8 @@ async function main({
         };
         
     } catch (error) {
-        console.error(chalk.red("❌ Error during AI automation:"), error);
-        
-        // Emit error COT event
-        emitCOTEvent("error", `Error during AI automation: ${error instanceof Error ? error.message : String(error)}`, -1);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        emitStagehandOutput('error', `❌ Error during AI automation: ${errorMessage}`, 'error');
         
         return {
             success: false,

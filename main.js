@@ -160,12 +160,12 @@ function createWindow() {
             line = line.trim()
             if (line) {
               try {
-                // Try to parse as JSON to detect COT events
+                // Try to parse as JSON to detect Stagehand output events
                 const parsed = JSON.parse(line)
-                if (parsed.type === "cot") {
-                  // Send COT event to frontend
+                if (parsed.type === "stagehand-output") {
+                  // Send Stagehand output event to frontend
                   mainWindow.webContents.send("stagehand-stream", {
-                    type: "cot",
+                    type: "stagehand-output",
                     data: parsed.data,
                     isComplete: false
                   })
@@ -251,11 +251,11 @@ function createWindow() {
 
   // Legacy handler for backward compatibility
   ipcMain.handle("execute-stagehand", async (event, userQuery) => {
-    return await ipcMain.handle("execute-stagehand-task", event, userQuery)
+    return await ipcMain.handle("execute-stagehand-with-memory", event, userQuery)
   })
 
-  // Memory management handlers
-  ipcMain.handle("add-memory", async (event, memoryData) => {
+   // Memory management handlers
+   ipcMain.handle("add-memory", async (event, memoryData) => {
     try {
       const memory = await memoryManager.addMemory(memoryData)
       return { success: true, memory }
@@ -349,25 +349,25 @@ function createWindow() {
   ipcMain.handle("execute-stagehand-with-memory", async (event, userQuery) => {
     try {
       console.log("Executing Stagehand task with memory context:", userQuery)
-      
+
       // Search for relevant memories
       const relevantMemories = await memoryManager.searchMemories(userQuery, 3)
       let memoryContext = ""
       let enhancedQuery = userQuery
-      
+
       if (relevantMemories.length > 0) {
         console.log(`🧠 Found ${relevantMemories.length} relevant memories for context`)
-        
+
         // Use the memory-based enhancement
         enhancedQuery = await memoryManager.enhanceQueryWithMemories(userQuery, relevantMemories)
-        
+
         // Create memory context for the agent
         memoryContext = "\n\n🧠 MEMORY CONTEXT - Previous actions that match your request:\n"
-        
+
         for (const memory of relevantMemories) {
           const date = new Date(memory.timestamp).toLocaleDateString()
           memoryContext += `📅 ${date}: ${memory.description}\n`
-          
+
           // Extract any useful details from the memory dynamically
           if (memory.details && typeof memory.details === 'object') {
             // Add any key-value pairs from details that might be useful
@@ -379,24 +379,24 @@ function createWindow() {
               })
               .map(([key, value]) => `   ${key}: ${value}`)
               .join('\n')
-            
+
             if (usefulDetails) {
               memoryContext += usefulDetails + '\n'
             }
           }
           memoryContext += "\n"
         }
-        
+
         console.log(`🔄 Enhanced query: "${enhancedQuery}"`)
       } else {
         console.log("🧠 No relevant memories found for this query")
       }
-      
+
       // Set the environment variable for the user query with memory context
       process.env.USER_QUERY = userQuery
       process.env.MEMORY_CONTEXT = memoryContext
       process.env.ENHANCED_QUERY = enhancedQuery
-      
+
       // Run the Stagehand script with memory context
       return new Promise((resolve, reject) => {
         const stagehandProcess = spawn("npm", ["run", "start"], {
@@ -410,15 +410,15 @@ function createWindow() {
           shell: true,
           stdio: ['pipe', 'pipe', 'pipe']
         })
-        
+
         let output = ""
         let errorOutput = ""
-        
+
         stagehandProcess.stdout.on("data", (data) => {
           const newOutput = data.toString()
           output += newOutput
           console.log("Stagehand output:", newOutput)
-          
+
           // Parse the output line by line to detect COT events
           const lines = newOutput.split('\n')
           lines.forEach(line => {
@@ -439,7 +439,7 @@ function createWindow() {
               } catch (e) {
                 // Not JSON, treat as regular output
               }
-              
+
               // Send regular output to frontend
               mainWindow.webContents.send("stagehand-stream", {
                 type: "output",
@@ -449,12 +449,12 @@ function createWindow() {
             }
           })
         })
-        
+
         stagehandProcess.stderr.on("data", (data) => {
           const newError = data.toString()
           errorOutput += newError
           console.error("Stagehand error:", newError)
-          
+
           // Send error updates to the frontend
           mainWindow.webContents.send("stagehand-stream", {
             type: "error",
@@ -462,7 +462,7 @@ function createWindow() {
             isComplete: false
           })
         })
-        
+
         stagehandProcess.on("close", async (code) => {
           if (code === 0) {
             // Save the result as a memory
@@ -480,9 +480,9 @@ function createWindow() {
               tags: ["stagehand", "automation", "execution"],
               relatedQueries: [userQuery, enhancedQuery]
             }
-            
+
             await memoryManager.addMemory(resultMemory)
-            
+
             // If the result contains specific information, store it separately
             if (output.length > 0) {
               const infoMemory = {
@@ -497,10 +497,10 @@ function createWindow() {
                 tags: ["information", "extracted", "stagehand"],
                 relatedQueries: [userQuery, enhancedQuery]
               }
-              
+
               await memoryManager.addMemory(infoMemory)
             }
-            
+
             // Send completion signal
             mainWindow.webContents.send("stagehand-stream", {
               type: "complete",
@@ -520,7 +520,7 @@ function createWindow() {
             reject(new Error(`Stagehand process exited with code ${code}: ${errorOutput}`))
           }
         })
-        
+
         stagehandProcess.on("error", (error) => {
           // Send error completion signal
           mainWindow.webContents.send("stagehand-stream", {
