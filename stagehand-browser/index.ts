@@ -54,7 +54,10 @@ async function main({
         let enhancedQuery = userQuery;
         
         if (relevantMemories.length > 0) {
-            console.log(chalk.cyan(`🧠 Found ${relevantMemories.length} relevant memories:`));
+            console.log(chalk.cyan(`🧠 Found ${relevantMemories.length} relevant memories with word overlap:`));
+            
+            // Use the new memory-based enhancement
+            enhancedQuery = await memoryManager.enhanceQueryWithMemories(userQuery, relevantMemories);
             
             // Create a simple memory context
             memoryContext = "\n\n🧠 MEMORY CONTEXT - Previous actions that match your request:\n";
@@ -67,45 +70,25 @@ async function main({
                 if (memory.details) {
                     if (memory.details.stock_symbol) {
                         memoryContext += `   Stock Symbol: ${memory.details.stock_symbol}\n`;
-                        // Enhance the query with the stock symbol
-                        if (userQuery.toLowerCase().includes("same stock") || 
-                            userQuery.toLowerCase().includes("yesterday") ||
-                            userQuery.toLowerCase().includes("stock") && userQuery.toLowerCase().includes("same")) {
-                            enhancedQuery = userQuery.replace(/same stock|yesterday|the same stock/gi, `${memory.details.stock_symbol} stock`);
-                        }
                     }
                     if (memory.details.company_name) {
                         memoryContext += `   Company: ${memory.details.company_name}\n`;
                     }
-                    if (memory.details.restaurant_chain) {
-                        memoryContext += `   Restaurant: ${memory.details.restaurant_chain}\n`;
-                        // Enhance food queries
-                        if (userQuery.toLowerCase().includes("same food") || 
-                            userQuery.toLowerCase().includes("dinner") || 
-                            userQuery.toLowerCase().includes("last week") ||
-                            userQuery.toLowerCase().includes("same restaurant")) {
-                            enhancedQuery = userQuery.replace(/same food|dinner from last week|same restaurant/gi, `food from ${memory.details.restaurant_chain}`);
-                        }
+                    if (memory.details.restaurant) {
+                        memoryContext += `   Restaurant: ${memory.details.restaurant}\n`;
                     }
                     if (memory.details.cuisine_type) {
                         memoryContext += `   Cuisine: ${memory.details.cuisine_type}\n`;
                     }
                     if (memory.details.product_category) {
                         memoryContext += `   Product: ${memory.details.product_category}\n`;
-                        // Enhance product searches
-                        if (userQuery.toLowerCase().includes("same product") || 
-                            userQuery.toLowerCase().includes("same headphones") ||
-                            userQuery.toLowerCase().includes("same laptop")) {
-                            enhancedQuery = userQuery.replace(/same product|same headphones|same laptop/gi, `${memory.details.product_category}`);
-                        }
                     }
                     if (memory.details.topic) {
                         memoryContext += `   Topic: ${memory.details.topic}\n`;
-                        // Enhance research queries
-                        if (userQuery.toLowerCase().includes("same topic") || 
-                            userQuery.toLowerCase().includes("same research")) {
-                            enhancedQuery = userQuery.replace(/same topic|same research/gi, `${memory.details.topic}`);
-                        }
+                    }
+                    // Add any other useful details from the memory
+                    if (memory.details.extractedInfo) {
+                        memoryContext += `   Info: ${memory.details.extractedInfo}\n`;
                     }
                 }
                 memoryContext += "\n";
@@ -125,23 +108,21 @@ When the user asks to save links, extract and clearly present all relevant URLs.
 Be thorough and complete the entire task from start to finish.
 Do not ask the user for any information, just use the browser to complete the task.
 
-🧠 MEMORY SYSTEM: You have access to previous actions and information. When the user refers to "same", "yesterday", "last week", or similar time references, use the memory context to understand what they mean.
+🧠 MEMORY SYSTEM: You have access to previous actions and information. The memory system finds relevant past actions based on word overlap with your current request.
 
 MEMORY CONTEXT:${memoryContext}
 
 IMPORTANT INSTRUCTIONS:
-1. If the memory context shows a stock symbol (like NVDA), use that specific symbol in your search
-2. If the memory context shows a restaurant name, use that specific restaurant
-3. If the memory context shows a product category, focus on that category
-4. Always prioritize the specific details from memory over generic searches
-5. If the user says "same stock" and memory shows NVDA, search for "NVDA stock price"
-6. If the user says "same food" and memory shows Domino's, search for "Domino's pizza"
-7. If the user says "yesterday" or "last week", look at the memory context for what was done then
+1. Use the memory context to understand what the user is referring to when they mention "same", "yesterday", "last week", or similar references
+2. If the memory shows specific details (stock symbols, restaurant names, product categories), use those specific details in your search
+3. Always prioritize specific information from memory over generic searches
+4. If the user says "same stock" and memory shows a specific stock symbol, search for that symbol
+5. If the user says "same restaurant" and memory shows a restaurant name, search for that restaurant
+6. If the user says "yesterday" or "last week", look at the memory context for what was done then
+7. Use the enhanced query if it's different from the original, otherwise use the original query but apply the memory context
 
 ORIGINAL QUERY: "${userQuery}"
 ENHANCED QUERY: "${enhancedQuery}"
-
-Use the enhanced query if it's different from the original, otherwise use the original query but apply the memory context.
 
 When you complete actions, make sure to extract and remember important details like:
 - URLs visited
