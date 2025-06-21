@@ -113,11 +113,16 @@ function createWindow() {
       // Set the environment variable for the user query
       process.env.USER_QUERY = userQuery
       
-      // Run the Stagehand script
+      // Run the Stagehand script using npm with shell option for better cross-platform support
       return new Promise((resolve, reject) => {
         const stagehandProcess = spawn("npm", ["run", "start"], {
           cwd: path.join(__dirname, "stagehand-browser"),
-          env: { ...process.env, USER_QUERY: userQuery }
+          env: { 
+            ...process.env, 
+            USER_QUERY: userQuery
+          },
+          shell: true, // Use shell for better cross-platform support
+          stdio: ['pipe', 'pipe', 'pipe']
         })
         
         let output = ""
