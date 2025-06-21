@@ -158,12 +158,12 @@ function createWindow() {
             line = line.trim()
             if (line) {
               try {
-                // Try to parse as JSON to detect COT events
+                // Try to parse as JSON to detect Stagehand output events
                 const parsed = JSON.parse(line)
-                if (parsed.type === "cot") {
-                  // Send COT event to frontend
+                if (parsed.type === "stagehand-output") {
+                  // Send Stagehand output event to frontend
                   mainWindow.webContents.send("stagehand-stream", {
-                    type: "cot",
+                    type: "stagehand-output",
                     data: parsed.data,
                     isComplete: false
                   })

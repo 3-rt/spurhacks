@@ -28,18 +28,41 @@ const AgentCOTStream = () => {
     // Listen for COT events from the main process
     if (window.electronAPI) {
       const handleStream = (data) => {
-        if (data.type === "cot") {
-          setCotEvents(prev => [...prev, data.data]);
-          setCurrentStep(data.data.step || 0);
+        if (data.type === "stagehand-output") {
+          // Create a consistent event format from Stagehand output
+          const event = {
+            type: data.data.type,
+            content: data.data.content,
+            level: data.data.level,
+            timestamp: data.data.timestamp
+          };
+          setCotEvents(prev => [event, ...prev]); // Prepend new events to top
           setIsStreaming(true);
-          scrollToBottom();
+          scrollToTop(); // Scroll to top instead of bottom
+        } else if (data.type === "output") {
+          // Handle raw terminal output from Stagehand
+          const event = {
+            type: "raw_output",
+            content: data.data,
+            level: "info",
+            timestamp: new Date().toISOString()
+          };
+          setCotEvents(prev => [event, ...prev]); // Prepend new events to top
+          setIsStreaming(true);
+          scrollToTop(); // Scroll to top instead of bottom
+        } else if (data.type === "error") {
+          // Handle error output from Stagehand
+          const event = {
+            type: "error",
+            content: data.data,
+            level: "error",
+            timestamp: new Date().toISOString()
+          };
+          setCotEvents(prev => [event, ...prev]); // Prepend new events to top
+          scrollToTop(); // Scroll to top instead of bottom
         } else if (data.type === "complete") {
           setIsStreaming(false);
           setIsExecuting(false);
-        } else if (data.type === "output" && data.data.includes("🎬 Starting AI automation")) {
-          // Detect when a new task starts
-          setIsStreaming(true);
-          setIsExecuting(true);
         }
       };
 
@@ -50,6 +73,14 @@ const AgentCOTStream = () => {
       };
     }
   }, []);
+
+  const scrollToTop = () => {
+    setTimeout(() => {
+      if (scrollAreaRef.current) {
+        scrollAreaRef.current.scrollTop = 0;
+      }
+    }, 100);
+  };
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -114,8 +145,8 @@ const AgentCOTStream = () => {
                 step: 0,
                 timestamp: new Date().toISOString()
               };
-              setCotEvents(prev => [...prev, transcriptionEvent]);
-              scrollToBottom();
+              setCotEvents(prev => [transcriptionEvent, ...prev]);
+              scrollToTop();
             } else {
               setRecordingStatus(`Transcription failed: ${transcriptionResult.error}`);
             }
@@ -176,7 +207,7 @@ const AgentCOTStream = () => {
           step: 6,
           timestamp: new Date().toISOString()
         };
-        setCotEvents(prev => [...prev, completionEvent]);
+        setCotEvents(prev => [completionEvent, ...prev]);
       }
       
     } catch (error) {
@@ -187,7 +218,7 @@ const AgentCOTStream = () => {
         step: -1,
         timestamp: new Date().toISOString()
       };
-      setCotEvents(prev => [...prev, errorEvent]);
+      setCotEvents(prev => [errorEvent, ...prev]);
     } finally {
       setIsExecuting(false);
       setIsStreaming(false);
@@ -210,7 +241,7 @@ const AgentCOTStream = () => {
       step: -1,
       timestamp: new Date().toISOString()
     };
-    setCotEvents(prev => [...prev, stopEvent]);
+    setCotEvents(prev => [stopEvent, ...prev]);
   };
 
   const getStepIcon = (type) => {
@@ -224,11 +255,28 @@ const AgentCOTStream = () => {
       case 'execution_complete':
         return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'screenshot':
+      case 'screenshot_saved':
         return <Target className="w-4 h-4 text-orange-500" />;
       case 'task_complete':
         return <CheckCircle className="w-4 h-4 text-green-600" />;
       case 'error':
+      case 'agent_error':
         return <AlertTriangle className="w-4 h-4 text-red-500" />;
+      case 'agent_action':
+        return <Brain className="w-4 h-4 text-indigo-500" />;
+      case 'agent_llm':
+        return <Brain className="w-4 h-4 text-purple-500" />;
+      case 'agent_debug':
+        return <Target className="w-4 h-4 text-gray-400" />;
+      case 'agent_info':
+      case 'agent_general':
+        return <Brain className="w-4 h-4 text-blue-400" />;
+      case 'agent_warning':
+        return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+      case 'agent_result':
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'raw_output':
+        return <Brain className="w-4 h-4 text-gray-300" />;
       case 'thinking_start':
         return <Brain className="w-4 h-4 text-indigo-500" />;
       case 'analyzing_request':
@@ -261,11 +309,28 @@ const AgentCOTStream = () => {
       case 'execution_complete':
         return 'border-green-500/30 bg-green-500/10';
       case 'screenshot':
+      case 'screenshot_saved':
         return 'border-orange-500/30 bg-orange-500/10';
       case 'task_complete':
         return 'border-green-600/30 bg-green-600/10';
       case 'error':
+      case 'agent_error':
         return 'border-red-500/30 bg-red-500/10';
+      case 'agent_action':
+        return 'border-indigo-500/30 bg-indigo-500/10';
+      case 'agent_llm':
+        return 'border-purple-500/30 bg-purple-500/10';
+      case 'agent_debug':
+        return 'border-gray-400/30 bg-gray-400/10';
+      case 'agent_info':
+      case 'agent_general':
+        return 'border-blue-400/30 bg-blue-400/10';
+      case 'agent_warning':
+        return 'border-yellow-500/30 bg-yellow-500/10';
+      case 'agent_result':
+        return 'border-green-500/30 bg-green-500/10';
+      case 'raw_output':
+        return 'border-gray-300/30 bg-gray-300/10';
       case 'thinking_start':
         return 'border-indigo-500/30 bg-indigo-500/10';
       case 'analyzing_request':
