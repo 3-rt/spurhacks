@@ -14,6 +14,10 @@ const recordingStatus = document.getElementById("recording-status")
 const recordingTime = document.getElementById("recording-time")
 const stopRecordingBtn = document.getElementById("stop-recording")
 
+// Agent cursor elements
+let agentCursor = null
+let cursorTrail = null
+
 // State
 let isExpanded = false
 let isDragging = false
@@ -27,11 +31,221 @@ let audioChunks = []
 let recordingStartTime = 0
 let recordingTimer = null
 
+// Agent cursor state
+let isAgentActive = false
+let currentTarget = null
+let cursorAnimation = null
+
 // Initialize the app in compact mode
 function initApp() {
   compactBox.classList.remove("opacity-0", "pointer-events-none")
   agentContainer.classList.remove("opacity-100", "pointer-events-auto")
   agentContainer.classList.add("opacity-0", "pointer-events-none")
+  
+  // Initialize agent cursor
+  createAgentCursor()
+}
+
+// Create the agent cursor element
+function createAgentCursor() {
+  // Create main cursor
+  agentCursor = document.createElement("div")
+  agentCursor.id = "agent-cursor"
+  agentCursor.className = "agent-cursor"
+  agentCursor.innerHTML = `
+    <div class="cursor-dot"></div>
+    <div class="cursor-ring"></div>
+    <div class="cursor-label">AI Agent</div>
+  `
+  document.body.appendChild(agentCursor)
+  
+  // Create cursor trail
+  cursorTrail = document.createElement("div")
+  cursorTrail.id = "cursor-trail"
+  cursorTrail.className = "cursor-trail"
+  document.body.appendChild(cursorTrail)
+  
+  // Initially hide the cursor
+  agentCursor.style.display = "none"
+  cursorTrail.style.display = "none"
+}
+
+// Move agent cursor smoothly to target
+function moveAgentCursor(targetX, targetY, duration = 1000, easing = "ease-out") {
+  if (!agentCursor) return
+  
+  return new Promise((resolve) => {
+    const startX = parseFloat(agentCursor.style.left) || 0
+    const startY = parseFloat(agentCursor.style.top) || 0
+    const deltaX = targetX - startX
+    const deltaY = targetY - startY
+    
+    const startTime = performance.now()
+    
+    function animate(currentTime) {
+      const elapsed = currentTime - startTime
+      const progress = Math.min(elapsed / duration, 1)
+      
+      // Apply easing
+      let easedProgress = progress
+      if (easing === "ease-out") {
+        easedProgress = 1 - Math.pow(1 - progress, 3)
+      } else if (easing === "ease-in-out") {
+        easedProgress = progress < 0.5 
+          ? 2 * progress * progress 
+          : 1 - Math.pow(-2 * progress + 2, 2) / 2
+      }
+      
+      const currentX = startX + (deltaX * easedProgress)
+      const currentY = startY + (deltaY * easedProgress)
+      
+      agentCursor.style.left = `${currentX}px`
+      agentCursor.style.top = `${currentY}px`
+      
+      // Add trail effect
+      addCursorTrail(currentX, currentY)
+      
+      if (progress < 1) {
+        cursorAnimation = requestAnimationFrame(animate)
+      } else {
+        resolve()
+      }
+    }
+    
+    cursorAnimation = requestAnimationFrame(animate)
+  })
+}
+
+// Add trail effect
+function addCursorTrail(x, y) {
+  if (!cursorTrail) return
+  
+  const trailDot = document.createElement("div")
+  trailDot.className = "trail-dot"
+  trailDot.style.left = `${x}px`
+  trailDot.style.top = `${y}px`
+  
+  cursorTrail.appendChild(trailDot)
+  
+  // Remove trail dot after animation
+  setTimeout(() => {
+    if (trailDot.parentNode) {
+      trailDot.parentNode.removeChild(trailDot)
+    }
+  }, 1000)
+}
+
+// Show agent cursor
+function showAgentCursor() {
+  if (agentCursor) {
+    agentCursor.style.display = "block"
+    cursorTrail.style.display = "block"
+    isAgentActive = true
+  }
+}
+
+// Hide agent cursor
+function hideAgentCursor() {
+  if (agentCursor) {
+    agentCursor.style.display = "none"
+    cursorTrail.style.display = "none"
+    isAgentActive = false
+  }
+}
+
+// Simulate agent browsing actions
+async function simulateAgentBrowsing() {
+  if (!isAgentActive) {
+    showAgentCursor()
+  }
+  
+  // Get screen dimensions
+  const screenWidth = window.screen.width
+  const screenHeight = window.screen.height
+  
+  // Simulate different browsing patterns
+  const actions = [
+    // Move to top-left area (like checking notifications)
+    { x: 100, y: 100, duration: 800, action: "checking notifications" },
+    // Move to center (like reading content)
+    { x: screenWidth / 2, y: screenHeight / 2, duration: 1200, action: "reading content" },
+    // Move to right side (like checking sidebar)
+    { x: screenWidth - 150, y: 300, duration: 600, action: "checking sidebar" },
+    // Move to bottom (like scrolling)
+    { x: screenWidth / 2, y: screenHeight - 200, duration: 1000, action: "scrolling down" },
+    // Move back to center
+    { x: screenWidth / 2, y: screenHeight / 2, duration: 800, action: "returning to content" }
+  ]
+  
+  for (const action of actions) {
+    await moveAgentCursor(action.x, action.y, action.duration)
+    
+    // Add a small pause between actions
+    await new Promise(resolve => setTimeout(resolve, 200))
+    
+    // Update cursor label
+    if (agentCursor) {
+      const label = agentCursor.querySelector(".cursor-label")
+      if (label) {
+        label.textContent = action.action
+      }
+    }
+  }
+  
+  // Hide cursor after browsing simulation
+  setTimeout(() => {
+    hideAgentCursor()
+  }, 1000)
+}
+
+// Simulate clicking action
+async function simulateClick(x, y) {
+  if (!isAgentActive) {
+    showAgentCursor()
+  }
+  
+  await moveAgentCursor(x, y, 600)
+  
+  // Add click animation
+  if (agentCursor) {
+    agentCursor.classList.add("clicking")
+    setTimeout(() => {
+      agentCursor.classList.remove("clicking")
+    }, 300)
+  }
+  
+  // Update cursor label
+  if (agentCursor) {
+    const label = agentCursor.querySelector(".cursor-label")
+    if (label) {
+      label.textContent = "clicking"
+    }
+  }
+}
+
+// Simulate typing action
+async function simulateTyping(x, y) {
+  if (!isAgentActive) {
+    showAgentCursor()
+  }
+  
+  await moveAgentCursor(x, y, 500)
+  
+  // Add typing animation
+  if (agentCursor) {
+    agentCursor.classList.add("typing")
+    const label = agentCursor.querySelector(".cursor-label")
+    if (label) {
+      label.textContent = "typing..."
+    }
+    
+    setTimeout(() => {
+      agentCursor.classList.remove("typing")
+      if (label) {
+        label.textContent = "AI Agent"
+      }
+    }, 2000)
+  }
 }
 
 // Expand the window and show agent interface
@@ -416,3 +630,95 @@ function audioBufferToWav(buffer) {
 
 // Initialize the app
 initApp()
+
+// Demo agent cursor functionality
+// Add keyboard shortcuts for testing
+document.addEventListener("keydown", (e) => {
+  // Press 'B' to start browsing simulation
+  if (e.key.toLowerCase() === 'b' && !isExpanded) {
+    e.preventDefault()
+    simulateAgentBrowsing()
+  }
+  
+  // Press 'C' to simulate a click at current mouse position
+  if (e.key.toLowerCase() === 'c' && !isExpanded) {
+    e.preventDefault()
+    simulateClick(e.clientX, e.clientY)
+  }
+  
+  // Press 'T' to simulate typing at current mouse position
+  if (e.key.toLowerCase() === 't' && !isExpanded) {
+    e.preventDefault()
+    simulateTyping(e.clientX, e.clientY)
+  }
+  
+  // Press 'H' to hide agent cursor
+  if (e.key.toLowerCase() === 'h' && !isExpanded) {
+    e.preventDefault()
+    hideAgentCursor()
+  }
+  
+  // Press 'S' to show agent cursor
+  if (e.key.toLowerCase() === 's' && !isExpanded) {
+    e.preventDefault()
+    showAgentCursor()
+  }
+})
+
+// Add demo buttons to the interface (optional)
+function addDemoButtons() {
+  const demoContainer = document.createElement("div")
+  demoContainer.className = "fixed bottom-4 left-4 flex gap-2 z-40"
+  demoContainer.innerHTML = `
+    <button id="demo-browse" class="bg-blue-600/80 text-white px-3 py-2 rounded text-xs hover:bg-blue-700/80 transition-colors">
+      Demo Browse (B)
+    </button>
+    <button id="demo-click" class="bg-red-600/80 text-white px-3 py-2 rounded text-xs hover:bg-red-700/80 transition-colors">
+      Demo Click (C)
+    </button>
+    <button id="demo-type" class="bg-green-600/80 text-white px-3 py-2 rounded text-xs hover:bg-green-700/80 transition-colors">
+      Demo Type (T)
+    </button>
+    <button id="demo-hide" class="bg-gray-600/80 text-white px-3 py-2 rounded text-xs hover:bg-gray-700/80 transition-colors">
+      Hide (H)
+    </button>
+  `
+  document.body.appendChild(demoContainer)
+  
+  // Add event listeners for demo buttons
+  document.getElementById("demo-browse").addEventListener("click", () => {
+    simulateAgentBrowsing()
+  })
+  
+  document.getElementById("demo-click").addEventListener("click", () => {
+    simulateClick(window.innerWidth / 2, window.innerHeight / 2)
+  })
+  
+  document.getElementById("demo-type").addEventListener("click", () => {
+    simulateTyping(window.innerWidth / 2, window.innerHeight / 2)
+  })
+  
+  document.getElementById("demo-hide").addEventListener("click", () => {
+    hideAgentCursor()
+  })
+}
+
+// Add demo buttons when the page loads
+setTimeout(() => {
+  addDemoButtons()
+}, 1000)
+
+// Export functions for external use
+window.agentCursor = {
+  show: showAgentCursor,
+  hide: hideAgentCursor,
+  move: moveAgentCursor,
+  click: simulateClick,
+  type: simulateTyping,
+  browse: simulateAgentBrowsing
+}
+
+// Add a message to show available controls
+setTimeout(() => {
+  addMessage("🤖 Agent cursor is ready! Press 'B' to see browsing simulation, 'C' for click demo, 'T' for typing demo, or use the demo buttons.", "assistant")
+}, 2000)
