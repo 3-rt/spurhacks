@@ -140,6 +140,15 @@
                         </svg>
                         Add
                     </button>
+                    <button id="mic-btn" class="bg-slate-800/50 border border-slate-700/50 text-slate-300 flex items-center gap-1.5 text-xs cursor-pointer px-2 py-1.5 rounded-md transition-colors duration-200 hover:bg-slate-700/50 hover:text-slate-200 hover:border-slate-600/50">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                            <line x1="12" y1="19" x2="12" y2="23"/>
+                            <line x1="8" y1="23" x2="16" y2="23"/>
+                        </svg>
+                        <span id="mic-text">Record</span>
+                    </button>
                     <input type="text" placeholder="Ask me anything..." class="flex-1 bg-transparent border-none text-white text-sm outline-none placeholder-slate-500">
                     <div class="flex items-center gap-2 text-xs text-slate-400">
                         <div class="flex items-center gap-1.5 bg-slate-800/50 px-2 py-1.5 rounded-md border border-slate-700/50">
@@ -150,6 +159,12 @@
                             <span class="text-slate-300">On</span>
                         </div>
                     </div>
+                </div>
+                <!-- Recording Status -->
+                <div id="recording-status" class="hidden mt-2 flex items-center gap-2 text-xs text-slate-300">
+                    <div class="w-2 h-2 bg-red-500 rounded-full recording-pulse"></div>
+                    <span>Recording... <span id="recording-time">00:00</span></span>
+                    
                 </div>
             </div>
         </div>

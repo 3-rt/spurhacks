@@ -1,6 +1,8 @@
 const { app, BrowserWindow, ipcMain, screen } = require("electron")
 const path = require("path")
 const { spawn } = require("child_process")
+const fs = require("fs")
+const os = require("os")
 
 let mainWindow
 
@@ -169,6 +171,35 @@ function createWindow() {
     } catch (error) {
       console.error("Error executing Stagehand:", error)
       return { success: false, output: null, error: error.message }
+    }
+  })
+
+  // Handle audio file saving
+  ipcMain.handle("save-audio-file", async (event, { buffer, filename }) => {
+    try {
+      // Create public folder in the project directory
+      const publicPath = path.join(__dirname, "public")
+      
+      // Create the public directory if it doesn't exist
+      if (!fs.existsSync(publicPath)) {
+        fs.mkdirSync(publicPath, { recursive: true })
+      }
+      
+      const filePath = path.join(publicPath, filename)
+      
+      fs.writeFileSync(filePath, Buffer.from(buffer))
+      
+      return {
+        success: true,
+        filename: filename,
+        path: filePath
+      }
+    } catch (error) {
+      console.error("Error saving audio file:", error)
+      return {
+        success: false,
+        error: error.message
+      }
     }
   })
 }
