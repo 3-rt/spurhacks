@@ -1,143 +1,103 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
-const path = require('path');
-const { spawn } = require('child_process');
+const { app, BrowserWindow, ipcMain, screen } = require("electron")
+const path = require("path")
 
-let mainWindow;
+let mainWindow
 
-function createMainWindow() {
-    // Create the main browser window
-    mainWindow = new BrowserWindow({
-        width: 1200,
-        height: 800,
-        webPreferences: {
-            nodeIntegration: false,
-            contextIsolation: true,
-            preload: path.join(__dirname, 'preload.js')
-        }
-    });
+function createWindow() {
+  // Get screen size to position the window in top right
+  const primaryDisplay = screen.getPrimaryDisplay()
+  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
+  
+  mainWindow = new BrowserWindow({
+    width: 80,
+    height: 80,
+    x: screenWidth - 100, // Position in top right
+    y: 20,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+    frame: false,
+    transparent: true,
+    resizable: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    show: false,
+  })
 
-    // Load the index.html file
-    mainWindow.loadFile('index.html');
+  mainWindow.loadFile("index.html")
 
-    // Open the DevTools in development (optional)
-    // mainWindow.webContents.openDevTools();
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show()
+  })
+
+  // Handle window controls
+  ipcMain.handle("window-minimize", () => {
+    mainWindow.minimize()
+  })
+
+  ipcMain.handle("window-maximize", () => {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize()
+    } else {
+      mainWindow.maximize()
+    }
+  })
+
+  ipcMain.handle("window-close", () => {
+    mainWindow.close()
+  })
+
+  // Handle window expansion to fixed size on the right
+  ipcMain.handle("expand-window", () => {
+    const primaryDisplay = screen.getPrimaryDisplay()
+    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
+    
+    // Fixed size for the agent window (similar to Cursor)
+    const agentWidth = 400
+    const agentHeight = 600
+    
+    // Position on the right side of the screen
+    const x = screenWidth - agentWidth - 20 // 20px margin from right edge
+    const y = 20 // 20px margin from top
+    
+    mainWindow.setBounds({
+      x: x,
+      y: y,
+      width: agentWidth,
+      height: agentHeight
+    })
+  })
+
+  // Handle window collapse
+  ipcMain.handle("collapse-window", () => {
+    const primaryDisplay = screen.getPrimaryDisplay()
+    const { width: screenWidth } = primaryDisplay.workAreaSize
+    
+    mainWindow.setBounds({
+      x: screenWidth - 100,
+      y: 20,
+      width: 80,
+      height: 80
+    })
+  })
+
+  // Handle window dragging
+  ipcMain.handle("set-window-position", (event, x, y) => {
+    mainWindow.setPosition(x, y)
+  })
 }
 
-// IPC handlers for communication with renderer
-ipcMain.handle('start-stagehand-youtube', async (event, userQuery) => {
-    try {
-        console.log('Starting Stagehand automation with user query:', userQuery);
-        mainWindow.webContents.send('stagehand-status', `Starting AI automation for: ${userQuery}`);
-        const stagehandProcess = spawn('npm', ['start'], {
-            cwd: path.join(__dirname, 'stagehand-browser'),
-            stdio: ['pipe', 'pipe', 'pipe'],
-            env: {
-                ...process.env,
-                USER_QUERY: userQuery
-            }
-        });
+app.whenReady().then(createWindow)
 
-        let output = '';
-        let errorOutput = '';
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit()
+  }
+})
 
-        // Capture stdout
-        stagehandProcess.stdout.on('data', (data) => {
-            const message = data.toString();
-            output += message;
-            console.log('Stagehand output:', message);
-            
-            // Send output to renderer
-            mainWindow.webContents.send('stagehand-output', {
-                type: 'log',
-                message: message
-            });
-        });
-
-        // Capture stderr
-        stagehandProcess.stderr.on('data', (data) => {
-            const message = data.toString();
-            errorOutput += message;
-            console.error('Stagehand error:', message);
-            
-            // Send error to renderer
-            mainWindow.webContents.send('stagehand-output', {
-                type: 'error',
-                message: message
-            });
-        });
-
-        // Handle process completion
-        return new Promise((resolve, reject) => {
-            stagehandProcess.on('close', (code) => {
-                console.log(`Stagehand process exited with code ${code}`);
-                
-                if (code === 0) {
-                    mainWindow.webContents.send('stagehand-status', 'Stagehand YouTube automation completed successfully!');
-                    resolve({
-                        success: true,
-                        output: output,
-                        error: errorOutput
-                    });
-                } else {
-                    mainWindow.webContents.send('stagehand-status', `Stagehand process exited with code ${code}`);
-                    reject(new Error(`Stagehand process exited with code ${code}`));
-                }
-            });
-
-            stagehandProcess.on('error', (error) => {
-                console.error('Failed to start Stagehand process:', error);
-                mainWindow.webContents.send('stagehand-status', `Failed to start Stagehand: ${error.message}`);
-                reject(error);
-            });
-        });
-
-    } catch (error) {
-        console.error('Error running Stagehand:', error);
-        mainWindow.webContents.send('stagehand-status', `Error: ${error.message}`);
-        throw error;
-    }
-});
-
-ipcMain.handle('check-stagehand-status', async () => {
-    try {
-        // Check if the stagehand-browser directory exists and has the necessary files
-        const fs = require('fs');
-        const stagehandPath = path.join(__dirname, 'stagehand-browser');
-        const packageJsonPath = path.join(stagehandPath, 'package.json');
-        
-        if (fs.existsSync(stagehandPath) && fs.existsSync(packageJsonPath)) {
-            return { 
-                available: true, 
-                message: 'Stagehand browser app is ready' 
-            };
-        } else {
-            return { 
-                available: false, 
-                message: 'Stagehand browser app not found' 
-            };
-        }
-    } catch (error) {
-        return { 
-            available: false, 
-            message: `Error checking Stagehand: ${error.message}` 
-        };
-    }
-});
-
-// This method will be called when Electron has finished initialization
-app.whenReady().then(() => {
-    createMainWindow();
-
-    app.on('activate', function () {
-        // On macOS it's common to re-create a window in the app when the
-        // dock icon is clicked and there are no other windows open.
-        if (BrowserWindow.getAllWindows().length === 0) {
-            createMainWindow();
-        }
-    });
-});
-
-// Quit when all windows are closed, except on macOS
-app.on('window-all-closed', function () {
-    if (process.platform !== 'darwin') app.quit();
-});
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow()
+  }
+})

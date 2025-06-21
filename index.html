@@ -3,314 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Electron Stagehand YouTube App</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f0f0f0;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        
-        .controls {
-            margin-bottom: 20px;
-            padding: 20px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
-        }
-        
-        .control-group {
-            margin-bottom: 15px;
-        }
-        
-        .control-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #495057;
-        }
-        
-        .button {
-            background-color: #ff0000;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-right: 10px;
-            font-weight: bold;
-        }
-        
-        .button:hover {
-            background-color: #cc0000;
-        }
-        
-        .button:disabled {
-            background-color: #6c757d;
-            cursor: not-allowed;
-        }
-        
-        .status {
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            font-weight: bold;
-        }
-        
-        .status.ready {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        
-        .status.error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        
-        .status.loading {
-            background-color: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeaa7;
-        }
-        
-        .output-section {
-            margin-top: 20px;
-        }
-        
-        .output-section h3 {
-            color: #333;
-            margin-bottom: 10px;
-        }
-        
-        .text-box {
-            width: 100%;
-            height: 500px;
-            padding: 15px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-            resize: vertical;
-            font-family: 'Courier New', monospace;
-            box-sizing: border-box;
-            background-color: #f8f9fa;
-        }
-        
-        .text-box:focus {
-            outline: none;
-            border-color: #ff0000;
-        }
-        
-        .clear-button {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-top: 10px;
-        }
-        
-        .clear-button:hover {
-            background-color: #c82333;
-        }
-        
-        .info-box {
-            background-color: #e3f2fd;
-            border: 1px solid #2196f3;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .info-box h4 {
-            color: #1976d2;
-            margin-top: 0;
-        }
-        
-        .info-box ul {
-            margin: 10px 0;
-            padding-left: 20px;
-        }
-        
-        .info-box li {
-            margin-bottom: 5px;
-        }
-    </style>
+    <title>AI Agent</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-    <div class="container">
-        <h1>🎬 YouTube Video Finder with Stagehand & Gemini AI</h1>
-        
-        <div class="info-box">
-            <h4>🤖 What this app does:</h4>
-            <ul>
-                <li>Uses Stagehand browser automation with Gemini 2.0 Flash AI</li>
-                <li>Navigates to YouTube and finds popular videos</li>
-                <li>Extracts video information (title, channel, views, description)</li>
-                <li>Takes screenshots and provides detailed analysis</li>
-                <li>All output is captured and displayed in real-time</li>
-            </ul>
+<body class="m-0 p-0 box-border font-sans bg-transparent text-white overflow-hidden select-none">
+    <!-- Compact Box View (shown when collapsed) -->
+    <div id="compact-box" class="fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-300">
+        <div class="w-20 h-20 bg-gradient-to-br from-slate-600 to-slate-800 rounded-xl flex items-center justify-center cursor-pointer shadow-lg border border-slate-600/50 transition-all duration-300 text-white hover:scale-105 hover:shadow-xl hover:border-slate-500/50 active:scale-95 webkit-app-region-drag">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/>
+                <path d="M2 12l10 5 10-5"/>
+            </svg>
         </div>
-        
-        <div id="status" class="status loading">
-            Checking Stagehand availability...
-        </div>
-        
-        <div class="controls">
-            <div class="control-group">
-                <button id="startButton" class="button" disabled>🚀 Start YouTube Video Finder</button>
-                <button id="statusButton" class="button" style="background-color: #007bff;">📊 Check Status</button>
-            </div>
-        </div>
-        
-        <div style="margin-bottom: 16px;">
-            <input type="text" id="user-instructions" placeholder="Enter your web automation instructions..." style="width: 60%; padding: 8px; font-size: 16px;">
-            <button id="start-automation" style="padding: 8px 16px; font-size: 16px;">Start Automation</button>
-        </div>
-        
-        <div class="output-section">
-            <h3>📺 Stagehand YouTube Automation Output:</h3>
-            <textarea id="outputBox" class="text-box" placeholder="Stagehand and Gemini AI output will appear here..." readonly></textarea>
-            <button id="clearButton" class="clear-button">Clear Output</button>
-        </div>
-        
-        <div id="output-area" style="white-space: pre-wrap; background: #222; color: #eee; padding: 16px; border-radius: 8px; min-height: 200px;"></div>
     </div>
 
-    <script>
-        // DOM elements
-        const statusDiv = document.getElementById('status');
-        const startButton = document.getElementById('startButton');
-        const statusButton = document.getElementById('statusButton');
-        const outputBox = document.getElementById('outputBox');
-        const clearButton = document.getElementById('clearButton');
-        const btn = document.getElementById('start-automation');
-        const input = document.getElementById('user-instructions');
-        const outputArea = document.getElementById('output-area');
+    <!-- Expanded Agent View (shown when expanded) -->
+    <div id="agent-container" class="fixed inset-0 bg-slate-950/95 backdrop-blur-xl flex flex-col opacity-0 pointer-events-none transition-opacity duration-300 rounded-xl overflow-hidden">
+        <!-- Custom Title Bar -->
+        <div class="bg-slate-900/90 h-10 flex items-center webkit-app-region-drag border-b border-slate-800/50">
+            <div class="w-full flex justify-between items-center px-4">
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 bg-slate-800 rounded-md flex items-center justify-center border border-slate-700/50">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-300">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                            <path d="M2 17l10 5 10-5"/>
+                            <path d="M2 12l10 5 10-5"/>
+                        </svg>
+                    </div>
+                    <span class="text-xs font-medium text-slate-200">AI Agent</span>
+                </div>
+                <div class="flex webkit-app-region-no-drag gap-1">
+                    <button id="collapse-btn" class="w-6 h-6 border-none bg-transparent text-slate-400 flex items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-slate-800/80 hover:text-slate-200 rounded-sm">
+                        <svg width="12" height="12" viewBox="0 0 12 12">
+                            <path d="M2 6L10 6" stroke="currentColor" stroke-width="1"/>
+                        </svg>
+                    </button>
+                    <button id="minimize-btn" class="w-6 h-6 border-none bg-transparent text-slate-400 flex items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-slate-800/80 hover:text-slate-200 rounded-sm">
+                        <svg width="12" height="12" viewBox="0 0 12 12">
+                            <rect x="2" y="5" width="8" height="2" fill="currentColor"/>
+                        </svg>
+                    </button>
+                    <button id="maximize-btn" class="w-6 h-6 border-none bg-transparent text-slate-400 flex items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-slate-800/80 hover:text-slate-200 rounded-sm">
+                        <svg width="12" height="12" viewBox="0 0 12 12">
+                            <rect x="2" y="2" width="8" height="8" stroke="currentColor" stroke-width="1" fill="none"/>
+                        </svg>
+                    </button>
+                    <button id="close-btn" class="w-6 h-6 border-none bg-transparent text-slate-400 flex items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-red-600/80 hover:text-white rounded-sm">
+                        <svg width="12" height="12" viewBox="0 0 12 12">
+                            <path d="M2 2L10 10M10 2L2 10" stroke="currentColor" stroke-width="1"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
 
-        // Initialize the app
-        async function initializeApp() {
-            try {
-                // Check Stagehand status
-                const status = await window.electronAPI.checkStagehandStatus();
-                if (status.available) {
-                    updateStatus('Stagehand YouTube automation is ready!', 'ready');
-                    startButton.disabled = false;
-                    addOutput(`✓ ${status.message}`);
-                } else {
-                    updateStatus('Stagehand not available', 'error');
-                    addOutput(`✗ ${status.message}`);
-                }
-            } catch (error) {
-                updateStatus(`Error: ${error.message}`, 'error');
-                addOutput(`✗ Error checking Stagehand: ${error.message}`);
-            }
-        }
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Chat Messages -->
+            <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+                <div class="flex gap-3 max-w-full">
+                    <div class="w-6 h-6 bg-slate-800 rounded-md flex items-center justify-center border border-slate-700/50 flex-shrink-0">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-300">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                            <path d="M2 17l10 5 10-5"/>
+                            <path d="M2 12l10 5 10-5"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1 leading-relaxed text-slate-200 text-sm">
+                        <p>Hello! I'm your AI assistant. How can I help you today?</p>
+                    </div>
+                </div>
 
-        // Update status display
-        function updateStatus(message, type) {
-            statusDiv.textContent = message;
-            statusDiv.className = `status ${type}`;
-        }
+                <!-- Example Chain of Thought Section -->
+                <div class="bg-slate-900/50 rounded-lg border border-slate-800/50 overflow-hidden">
+                    <div class="bg-slate-800/50 px-3 py-2 border-b border-slate-700/50 flex items-center gap-2">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-300">
+                            <path d="M9 12l2 2 4-4"/>
+                            <circle cx="12" cy="12" r="10"/>
+                        </svg>
+                        <span class="text-xs font-medium text-slate-200">Thinking...</span>
+                        <div class="flex gap-1 ml-auto">
+                            <div class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse"></div>
+                            <div class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse" style="animation-delay: 0.2s;"></div>
+                            <div class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse" style="animation-delay: 0.4s;"></div>
+                        </div>
+                    </div>
+                    <div class="p-3 space-y-3">
+                        <div class="flex gap-2 items-start">
+                            <div class="w-5 h-5 bg-slate-700 rounded-sm flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-xs text-slate-300">1</span>
+                            </div>
+                            <div class="text-xs text-slate-300 leading-relaxed">
+                                <span class="text-slate-200 font-medium">Analyzing request:</span> User wants to create an Electron app with a draggable interface. Need to understand the requirements for window management and UI interactions.
+                            </div>
+                        </div>
+                        <div class="flex gap-2 items-start">
+                            <div class="w-5 h-5 bg-slate-700 rounded-sm flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-xs text-slate-300">2</span>
+                            </div>
+                            <div class="text-xs text-slate-300 leading-relaxed">
+                                <span class="text-slate-200 font-medium">Planning approach:</span> Will need to use Electron's BrowserWindow API with frameless and transparent options. Should implement IPC communication for window resizing and positioning.
+                            </div>
+                        </div>
+                        <div class="flex gap-2 items-start">
+                            <div class="w-5 h-5 bg-slate-700 rounded-sm flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-xs text-slate-300">3</span>
+                            </div>
+                            <div class="text-xs text-slate-300 leading-relaxed">
+                                <span class="text-slate-200 font-medium">Implementation strategy:</span> Start with a small draggable box, add click-to-expand functionality, and create smooth transitions between states. Will use Tailwind CSS for styling.
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-        // Add output to text box
-        function addOutput(message) {
-            const timestamp = new Date().toLocaleTimeString();
-            const output = `[${timestamp}] ${message}\n`;
-            outputBox.value += output;
-            outputBox.scrollTop = outputBox.scrollHeight;
-        }
+                <div class="flex gap-3 max-w-full">
+                    <div class="w-6 h-6 bg-slate-800 rounded-md flex items-center justify-center border border-slate-700/50 flex-shrink-0">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-300">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                            <path d="M2 17l10 5 10-5"/>
+                            <path d="M2 12l10 5 10-5"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1 leading-relaxed text-slate-200 text-sm">
+                        <p>I can definitely help you create an Electron application with a draggable interface! Based on your requirements, I'll guide you through setting up a frameless window with transparent background and implementing the drag-and-expand functionality.</p>
+                    </div>
+                </div>
+            </div>
 
-        // Event listeners
-        startButton.addEventListener('click', async () => {
-            startButton.disabled = true;
-            updateStatus('Starting YouTube automation with Gemini AI...', 'loading');
-            addOutput('🎬 Starting YouTube video finder with Stagehand and Gemini 2.0 Flash...');
+            <!-- Bottom Input Area -->
+            <div class="bg-slate-900/90 border-t border-slate-800/50 p-4">
+                <div class="flex items-center gap-3 bg-slate-950/80 rounded-lg p-3 border border-slate-800/50 shadow-lg">
+                    <button class="bg-slate-800/50 border border-slate-700/50 text-slate-300 flex items-center gap-1.5 text-xs cursor-pointer px-2 py-1.5 rounded-md transition-colors duration-200 hover:bg-slate-700/50 hover:text-slate-200 hover:border-slate-600/50">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                        </svg>
+                        Add
+                    </button>
+                    <input type="text" placeholder="Ask me anything..." class="flex-1 bg-transparent border-none text-white text-sm outline-none placeholder-slate-500">
+                    <div class="flex items-center gap-2 text-xs text-slate-400">
+                        <div class="flex items-center gap-1.5 bg-slate-800/50 px-2 py-1.5 rounded-md border border-slate-700/50">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" class="text-slate-300">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+                            </svg>
+                            <span class="text-slate-300">On</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            try {
-                const result = await window.electronAPI.startStagehandYouTube();
-                if (result.success) {
-                    addOutput('✅ YouTube automation completed successfully!');
-                    addOutput(`📊 Process output length: ${result.output.length} characters`);
-                    if (result.error) {
-                        addOutput(`⚠️ Errors: ${result.error}`);
-                    }
-                    updateStatus('YouTube automation completed successfully!', 'ready');
-                } else {
-                    addOutput(`❌ Automation failed: ${result.error}`);
-                    updateStatus('YouTube automation failed', 'error');
-                }
-            } catch (error) {
-                addOutput(`❌ Error: ${error.message}`);
-                updateStatus('YouTube automation failed', 'error');
-            } finally {
-                startButton.disabled = false;
-            }
-        });
-
-        statusButton.addEventListener('click', async () => {
-            try {
-                const status = await window.electronAPI.checkStagehandStatus();
-                addOutput(`📊 Stagehand status: ${status.available ? 'Available' : 'Not available'}`);
-                addOutput(`📝 Status message: ${status.message}`);
-            } catch (error) {
-                addOutput(`❌ Error checking status: ${error.message}`);
-            }
-        });
-
-        clearButton.addEventListener('click', () => {
-            outputBox.value = '';
-        });
-
-        // Listen for Stagehand output
-        window.electronAPI.onStagehandOutput((data) => {
-            if (data.type === 'log') {
-                addOutput(`🤖 ${data.message}`);
-            } else if (data.type === 'error') {
-                addOutput(`❌ Error: ${data.message}`);
-            }
-        });
-
-        // Listen for Stagehand status updates
-        window.electronAPI.onStagehandStatus((status) => {
-            addOutput(`📡 Status: ${status}`);
-        });
-
-        // Add event listener for the button
-        btn.addEventListener('click', async () => {
-            const instructions = input.value.trim();
-            if (!instructions) {
-                outputArea.textContent = 'Please enter instructions.';
-                return;
-            }
-            outputArea.textContent = 'Running automation...';
-            // Use the exposed API from preload.js
-            const result = await window.stagehand.startAutomation(instructions);
-            outputArea.textContent = result;
-        });
-
-        // Initialize the app when the page loads
-        document.addEventListener('DOMContentLoaded', initializeApp);
-    </script>
+    <script src="render.js"></script>
 </body>
-</html> 
+</html>
