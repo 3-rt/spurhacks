@@ -152,11 +152,34 @@ function createWindow() {
           output += newOutput
           console.log("Stagehand output:", newOutput)
           
-          // Send real-time updates to the frontend
-          mainWindow.webContents.send("stagehand-stream", {
-            type: "output",
-            data: newOutput,
-            isComplete: false
+          // Parse the output line by line to detect COT events
+          const lines = newOutput.split('\n')
+          lines.forEach(line => {
+            line = line.trim()
+            if (line) {
+              try {
+                // Try to parse as JSON to detect COT events
+                const parsed = JSON.parse(line)
+                if (parsed.type === "cot") {
+                  // Send COT event to frontend
+                  mainWindow.webContents.send("stagehand-stream", {
+                    type: "cot",
+                    data: parsed.data,
+                    isComplete: false
+                  })
+                  return // Don't send as regular output
+                }
+              } catch (e) {
+                // Not JSON, treat as regular output
+              }
+              
+              // Send regular output to frontend
+              mainWindow.webContents.send("stagehand-stream", {
+                type: "output",
+                data: line + '\n',
+                isComplete: false
+              })
+            }
           })
         })
         
