@@ -134,15 +134,6 @@ class PersistentStagehandServer {
       // Send start message
       this.sendStreamUpdate(res, { type: 'start', message: `Starting execution: ${userQuery}` });
       
-      // Create a single web agent that can handle any task
-      const agent = this.stagehand.agent({
-        instructions: `You are a helpful web assistant that can use a browser to complete any task the user requests.
-You can navigate to any website, search for information, find images, videos, links, or any other content.
-When the user asks to save links, extract and clearly present all relevant URLs.
-Be thorough and complete the entire task from start to finish.
-Do not ask the user for any information, just use the browser to complete the task.`,
-      });
-
       // Capture all console output
       const originalLog = console.log;
       const originalInfo = console.info;
@@ -174,17 +165,14 @@ Do not ask the user for any information, just use the browser to complete the ta
       };
 
       try {
-        // Execute the user's query with the agent
-        const result = await agent.execute(userQuery);
+        // Custom agent implementation that streams actions in real-time
+        const result = await this.executeCustomAgent(userQuery, res);
         
         // Restore original console methods
         console.log = originalLog;
         console.info = originalInfo;
         console.warn = originalWarn;
         console.error = originalError;
-        
-        console.log(chalk.yellow("🤖 Agent Result:"));
-        console.log(result);
         
         // Take a screenshot of the final results
         await this.page.screenshot({ 
@@ -193,7 +181,7 @@ Do not ask the user for any information, just use the browser to complete the ta
         });
         console.log(chalk.green("📸 Screenshot saved as automation-results.png"));
         
-        // Send completion message with the full result
+        // Send completion message
         this.sendStreamUpdate(res, { 
           type: 'complete', 
           success: true,
@@ -234,6 +222,120 @@ Do not ask the user for any information, just use the browser to complete the ta
         success: false,
         error: error instanceof Error ? error.message : String(error)
       };
+    }
+  }
+
+  private async executeCustomAgent(userQuery: string, res: any) {
+    if (!this.page) {
+      throw new Error("Page not initialized");
+    }
+
+    const actions: any[] = [];
+    let actionCounter = 0;
+
+    // Helper function to add and stream an action
+    const addAction = async (type: string, reasoning: string, parameters: any, taskCompleted: boolean = false) => {
+      actionCounter++;
+      const action = {
+        type,
+        reasoning,
+        parameters,
+        taskCompleted,
+        timestamp: new Date().toISOString()
+      };
+      
+      actions.push(action);
+      
+      // Stream the action immediately
+      this.sendStreamUpdate(res, {
+        type: 'action',
+        data: {
+          number: actionCounter,
+          action: action
+        }
+      });
+      
+      // Add a small delay to make streaming visible
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      return action;
+    };
+
+    try {
+      // Analyze the user query to determine the best approach
+      const query = userQuery.toLowerCase();
+      
+      // Check if it's a search query
+      if (query.includes('search') || query.includes('find') || query.includes('look up')) {
+        // Handle search queries
+        await addAction('analyze', 'Detected search query, will navigate to Google', userQuery);
+        
+        await addAction('goto', 'Navigating to Google search', 'https://www.google.com');
+        await this.page.goto('https://www.google.com');
+        
+        // Extract search terms from the query
+        let searchTerms = userQuery;
+        if (query.includes('search for')) {
+          searchTerms = userQuery.split('search for')[1]?.trim() || userQuery;
+        } else if (query.includes('find')) {
+          searchTerms = userQuery.split('find')[1]?.trim() || userQuery;
+        }
+        
+        await addAction('act', `Typing search terms: ${searchTerms}`, `type "${searchTerms}" into the search box`);
+        await this.page.act(`type "${searchTerms}" into the search box`);
+        
+        await addAction('act', 'Pressing Enter to search', 'press Enter');
+        await this.page.act('press Enter');
+        
+        await addAction('wait', 'Waiting for search results to load', 'wait for page to load');
+        await this.page.waitForLoadState('networkidle');
+        
+      } else if (query.includes('go to') || query.includes('navigate to')) {
+        // Handle navigation queries
+        await addAction('analyze', 'Detected navigation query', userQuery);
+        
+        // Extract URL or site name
+        let url = '';
+        if (query.includes('go to')) {
+          url = userQuery.split('go to')[1]?.trim() || '';
+        } else if (query.includes('navigate to')) {
+          url = userQuery.split('navigate to')[1]?.trim() || '';
+        }
+        
+        // Add protocol if missing
+        if (url && !url.startsWith('http')) {
+          url = 'https://' + url;
+        }
+        
+        await addAction('goto', `Navigating to: ${url}`, url);
+        await this.page.goto(url);
+        
+      } else {
+        // Generic approach - try to execute the query directly
+        await addAction('analyze', 'Using generic approach for complex query', userQuery);
+        
+        // Start with Google as default
+        await addAction('goto', 'Starting with Google as default', 'https://www.google.com');
+        await this.page.goto('https://www.google.com');
+        
+        // Try to execute the query using the page's act method
+        await addAction('act', `Executing query: ${userQuery}`, userQuery);
+        await this.page.act(userQuery);
+      }
+      
+      // Mark as completed
+      await addAction('complete', 'Task completed successfully', null, true);
+      
+      return {
+        success: true,
+        message: `Successfully executed: ${userQuery}`,
+        actions: actions,
+        completed: true
+      };
+      
+    } catch (error) {
+      await addAction('error', `Error occurred: ${error instanceof Error ? error.message : String(error)}`, null, false);
+      throw error;
     }
   }
 

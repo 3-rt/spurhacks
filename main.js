@@ -172,6 +172,14 @@ function createWindow() {
                       })
                       break
                       
+                    case 'action':
+                      mainWindow.webContents.send("stagehand-stream", {
+                        type: "action",
+                        data: data.data,
+                        isComplete: false
+                      })
+                      break
+                      
                     case 'error':
                       mainWindow.webContents.send("stagehand-stream", {
                         type: "error",
@@ -444,7 +452,15 @@ async function ensurePersistentServer() {
   })
   
   persistentServerProcess.stderr.on("data", (data) => {
-    console.error("Persistent server error:", data.toString())
+    const errorOutput = data.toString()
+    console.error("Persistent server error:", errorOutput)
+    
+    // Send error output to frontend
+    mainWindow.webContents.send("stagehand-stream", {
+      type: "error",
+      data: errorOutput,
+      isComplete: false
+    })
   })
   
   // Wait for server to be ready

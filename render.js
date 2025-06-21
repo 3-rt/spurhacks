@@ -150,11 +150,65 @@ messageInput.addEventListener("keypress", async (e) => {
       // Set up real-time streaming listener
       const streamHandler = (data) => {
         if (data.type === "output") {
-          streamingContent += data.data
+          // Format the output based on content
+          let formattedData = data.data
+          
+          // Handle console log prefixes
+          if (formattedData.includes("Persistent server-injected:")) {
+            // Remove the prefix and format as a clean log
+            formattedData = formattedData.replace("Persistent server-injected:", "").trim()
+          }
+          
+          // Handle different types of output
+          if (formattedData.includes("🎬 Executing query:")) {
+            formattedData = `\n🚀 **Starting execution:** ${formattedData.split('"')[1]}\n`
+          } else if (formattedData.includes("🤖 Agent completed")) {
+            formattedData = `\n${formattedData}\n`
+          } else if (formattedData.match(/^\d+\.\s+[A-Z]+/)) {
+            // Format action items
+            formattedData = `\n${formattedData}\n`
+          } else if (formattedData.includes("📋 Summary:")) {
+            formattedData = `\n${formattedData}\n`
+          } else if (formattedData.includes("📸 Screenshot saved")) {
+            formattedData = `\n${formattedData}\n`
+          } else if (formattedData.includes("✅ Browser session initialized")) {
+            formattedData = `\n${formattedData}\n`
+          } else if (formattedData.includes("🌐 Server listening")) {
+            formattedData = `\n${formattedData}\n`
+          }
+          
+          streamingContent += formattedData
+          streamingTextElement.textContent = streamingContent
+          scrollToBottom()
+        } else if (data.type === "action") {
+          // Handle real-time action updates
+          const actionData = data.data
+          const action = actionData.action
+          
+          let actionText = `\n${actionData.number}. **${action.type.toUpperCase()}**`
+          if (action.reasoning) {
+            actionText += `\n   💭 ${action.reasoning}`
+          }
+          if (action.parameters) {
+            actionText += `\n   📝 ${action.parameters}`
+          }
+          if (action.taskCompleted !== undefined) {
+            actionText += `\n   ${action.taskCompleted ? '✅ Completed' : '⏳ In Progress'}`
+          }
+          actionText += '\n'
+          
+          streamingContent += actionText
           streamingTextElement.textContent = streamingContent
           scrollToBottom()
         } else if (data.type === "error") {
-          streamingContent += `Error: ${data.data}`
+          let errorData = data.data
+          
+          // Handle console error prefixes
+          if (errorData.includes("Persistent server error:")) {
+            errorData = errorData.replace("Persistent server error:", "").trim()
+          }
+          
+          streamingContent += `\n❌ **Error:** ${errorData}\n`
           streamingTextElement.textContent = streamingContent
           scrollToBottom()
         } else if (data.type === "complete") {
@@ -162,9 +216,9 @@ messageInput.addEventListener("keypress", async (e) => {
           window.electronAPI.removeAllListeners('stagehand-stream')
           
           if (data.success) {
-            streamingContent += "\n\n✅ Task completed successfully!"
+            streamingContent += "\n\n✅ **Task completed successfully!**"
           } else {
-            streamingContent += "\n\n❌ Task failed"
+            streamingContent += "\n\n❌ **Task failed**"
           }
           streamingTextElement.textContent = streamingContent
           scrollToBottom()
