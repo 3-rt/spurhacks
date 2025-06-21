@@ -3,6 +3,20 @@ const path = require("path")
 const { spawn } = require("child_process")
 const fs = require("fs")
 const os = require("os")
+const Groq = require("groq-sdk")
+
+// Load environment variables from .env file
+require('dotenv').config({ path: path.join(__dirname, 'stagehand-browser', '.env') })
+
+// Check if Groq API key is set
+if (!process.env.GROQ_API_KEY) {
+  console.warn('⚠️  GROQ_API_KEY not set. Speech-to-text transcription will not work.')
+  console.warn('   Run "npm run setup" to configure your API key or set the environment variable.')
+}
+
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY, // Make sure to set this environment variable
+})
 
 let mainWindow
 
@@ -196,6 +210,48 @@ function createWindow() {
       }
     } catch (error) {
       console.error("Error saving audio file:", error)
+      return {
+        success: false,
+        error: error.message
+      }
+    }
+  })
+
+  // Handle audio transcription with Groq
+  ipcMain.handle("transcribe-audio", async (event, { filePath }) => {
+    try {
+      // Check if Groq API key is set
+      if (!process.env.GROQ_API_KEY) {
+        throw new Error("GROQ_API_KEY not set. Please run 'npm run setup' to configure your API key.")
+      }
+      
+      console.log("Transcribing audio file:", filePath)
+      
+      // Check if file exists
+      if (!fs.existsSync(filePath)) {
+        throw new Error("Audio file not found")
+      }
+
+      // Create a readable stream from the file
+      const audioStream = fs.createReadStream(filePath)
+      
+      // Transcribe using Groq
+      const transcription = await groq.audio.transcriptions.create({
+        file: audioStream,
+        model: "distil-whisper-large-v3-en",
+        response_format: "verbose_json",
+      })
+
+      console.log("Transcription completed:", transcription.text)
+      
+      return {
+        success: true,
+        text: transcription.text,
+        language: transcription.language,
+        duration: transcription.duration
+      }
+    } catch (error) {
+      console.error("Error transcribing audio:", error)
       return {
         success: false,
         error: error.message

@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     // Audio recording
     saveAudioFile: (data) => ipcRenderer.invoke('save-audio-file', data),
+    transcribeAudio: (filePath) => ipcRenderer.invoke('transcribe-audio', { filePath }),
     
     // Stagehand YouTube automation
     startStagehandYouTube: () => ipcRenderer.invoke('start-stagehand-youtube'),

@@ -458,6 +458,39 @@ async function saveAudioFile(audioBlob) {
     
     if (result.success) {
       addMessage(`✅ Audio saved to public folder: ${result.filename}`, "assistant")
+      
+      // Show transcription status
+      const transcriptionMessage = addMessage("🎤 Transcribing audio...", "assistant")
+      
+      try {
+        // Transcribe the audio file
+        const transcriptionResult = await window.electronAPI.transcribeAudio(result.path)
+        
+        if (transcriptionResult.success) {
+          // Remove transcription status message
+          transcriptionMessage.remove()
+          
+          // Show transcription result
+          addMessage(`📝 Transcription: "${transcriptionResult.text}"`, "assistant")
+          
+          // Populate the input box with transcribed text
+          messageInput.value = transcriptionResult.text
+          
+          // Focus the input box for easy editing
+          messageInput.focus()
+          
+          // Show a helpful message
+          addMessage("💡 You can edit the transcribed text and press Enter to execute your command!", "assistant")
+          
+        } else {
+          transcriptionMessage.remove()
+          addMessage(`❌ Transcription failed: ${transcriptionResult.error}`, "assistant")
+        }
+      } catch (transcriptionError) {
+        transcriptionMessage.remove()
+        addMessage(`❌ Transcription error: ${transcriptionError.message}`, "assistant")
+      }
+      
     } else {
       addMessage("❌ Failed to save audio file", "assistant")
     }
