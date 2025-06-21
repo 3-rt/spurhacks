@@ -43,7 +43,7 @@ function createWindow() {
     show: false,
   })
 
-  mainWindow.loadFile("index.html")
+  mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'))
 
   mainWindow.once("ready-to-show", () => {
     mainWindow.show()
@@ -71,13 +71,13 @@ function createWindow() {
     const primaryDisplay = screen.getPrimaryDisplay()
     const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
     
-    // Fixed size for the agent window (similar to Cursor)
-    const agentWidth = 400
-    const agentHeight = 600
+    // Expanded size for the new dashboard
+    const agentWidth = Math.floor(screenWidth * 0.8);
+    const agentHeight = Math.floor(screenHeight * 0.8);
     
-    // Position on the right side of the screen
-    const x = screenWidth - agentWidth - 20 // 20px margin from right edge
-    const y = 20 // 20px margin from top
+    // Center the window
+    const x = Math.floor((screenWidth - agentWidth) / 2);
+    const y = Math.floor((screenHeight - agentHeight) / 2);
     
     mainWindow.setBounds({
       x: x,
