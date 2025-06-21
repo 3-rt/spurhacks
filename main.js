@@ -72,19 +72,19 @@ function createWindow() {
     const primaryDisplay = screen.getPrimaryDisplay()
     const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
     
-    // Expanded size for the new dashboard
-    const agentWidth = 1440;
-    const agentHeight = 810;
+    // Calculate 16:9 dimensions based on 90% of screen height
+    const aspectHeight = Math.floor(screenHeight * 0.9);
+    const aspectWidth = Math.floor(aspectHeight * (16 / 9));
     
     // Center the window
-    const x = Math.floor((screenWidth - agentWidth) / 2);
-    const y = Math.floor((screenHeight - agentHeight) / 2);
+    const x = Math.floor((screenWidth - aspectWidth) / 2);
+    const y = Math.floor((screenHeight - aspectHeight) / 2);
     
     mainWindow.setBounds({
       x: x,
       y: y,
-      width: agentWidth,
-      height: agentHeight
+      width: aspectWidth,
+      height: aspectHeight
     })
   })
 

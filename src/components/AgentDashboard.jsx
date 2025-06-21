@@ -16,7 +16,7 @@ function AgentDashboard() {
           <div className="p-4">
             <AgentStats />
           </div>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 flex">
             <OperationsList />
           </div>
         </div>
