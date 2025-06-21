@@ -430,57 +430,159 @@ async function ensurePersistentServer() {
   
   // Start the persistent server
   console.log("Starting persistent server...")
-  persistentServerProcess = spawn("npm", ["run", "server"], {
-    cwd: path.join(__dirname, "stagehand-browser"),
-    env: { ...process.env },
-    shell: true,
-    stdio: ['pipe', 'pipe', 'pipe']
-  })
   
-  persistentServerProcess.stdout.on("data", (data) => {
-    const output = data.toString()
-    console.log("Persistent server:", output)
-    
-    // Check if server is ready
-    if (output.includes("🌐 Server listening on port")) {
-      const portMatch = output.match(/port (\d+)/)
-      if (portMatch) {
-        serverPort = parseInt(portMatch[1])
-        console.log(`Server ready on port ${serverPort}`)
-      }
+  // Windows-specific fixes
+  const isWindows = process.platform === 'win32'
+  const stagehandPath = path.join(__dirname, "stagehand-browser")
+  
+  console.log(`Stagehand path: ${stagehandPath}`)
+  console.log(`Platform: ${process.platform}`)
+  
+  try {
+    // Use different spawn approach for Windows
+    if (isWindows) {
+      // On Windows, use npm run server which should work better
+      persistentServerProcess = spawn("npm", ["run", "server"], {
+        cwd: stagehandPath,
+        env: { 
+          ...process.env, 
+          FORCE_COLOR: '1',
+          NODE_ENV: 'development'
+        },
+        shell: true,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: false
+      })
+    } else {
+      persistentServerProcess = spawn("npm", ["run", "server"], {
+        cwd: stagehandPath,
+        env: { ...process.env },
+        shell: true,
+        stdio: ['pipe', 'pipe', 'pipe']
+      })
     }
-  })
-  
-  persistentServerProcess.stderr.on("data", (data) => {
-    const errorOutput = data.toString()
-    console.error("Persistent server error:", errorOutput)
     
-    // Send error output to frontend
-    mainWindow.webContents.send("stagehand-stream", {
-      type: "error",
-      data: errorOutput,
-      isComplete: false
+    persistentServerProcess.stdout.on("data", (data) => {
+      const output = data.toString()
+      console.log("Persistent server:", output)
+      
+      // Check if server is ready
+      if (output.includes("🌐 Server listening on port")) {
+        const portMatch = output.match(/port (\d+)/)
+        if (portMatch) {
+          serverPort = parseInt(portMatch[1])
+          console.log(`Server ready on port ${serverPort}`)
+        }
+      }
     })
-  })
-  
-  // Wait for server to be ready
-  let attempts = 0
-  while (attempts < 30) {
-    try {
-      const status = await checkServerStatus()
-      if (status.isReady) {
-        console.log("Persistent server is ready")
-        return
+    
+    persistentServerProcess.stderr.on("data", (data) => {
+      const errorOutput = data.toString()
+      console.error("Persistent server error:", errorOutput)
+      
+      // Send error output to frontend
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send("stagehand-stream", {
+          type: "error",
+          data: errorOutput,
+          isComplete: false
+        })
       }
-    } catch (error) {
-      // Server not ready yet
+    })
+    
+    persistentServerProcess.on("error", (error) => {
+      console.error("Failed to start persistent server process:", error)
+    })
+    
+    persistentServerProcess.on("exit", (code, signal) => {
+      console.log(`Persistent server process exited with code ${code} and signal ${signal}`)
+      persistentServerProcess = null
+    })
+    
+    // Wait for server to be ready
+    let attempts = 0
+    while (attempts < 30) {
+      try {
+        const status = await checkServerStatus()
+        if (status.isReady) {
+          console.log("Persistent server is ready")
+          return
+        }
+      } catch (error) {
+        // Server not ready yet
+        console.log(`Server not ready yet (attempt ${attempts + 1}/30)`)
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      attempts++
     }
     
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    attempts++
+    throw new Error("Failed to start persistent server after 30 attempts")
+    
+  } catch (error) {
+    console.error("Error starting persistent server:", error)
+    throw error
   }
+}
+
+// Fallback server startup method for Windows
+async function tryFallbackServerStartup(stagehandPath) {
+  console.log("Attempting fallback server startup...")
   
-  throw new Error("Failed to start persistent server")
+  try {
+    // Try using tsx directly
+    persistentServerProcess = spawn("npx", ["tsx", "persistent-server.ts"], {
+      cwd: stagehandPath,
+      env: { 
+        ...process.env, 
+        FORCE_COLOR: '1',
+        NODE_ENV: 'development'
+      },
+      shell: true,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      windowsHide: false
+    })
+    
+    persistentServerProcess.stdout.on("data", (data) => {
+      const output = data.toString()
+      console.log("Fallback server:", output)
+      
+      if (output.includes("🌐 Server listening on port")) {
+        const portMatch = output.match(/port (\d+)/)
+        if (portMatch) {
+          serverPort = parseInt(portMatch[1])
+          console.log(`Fallback server ready on port ${serverPort}`)
+        }
+      }
+    })
+    
+    persistentServerProcess.stderr.on("data", (data) => {
+      console.error("Fallback server error:", data.toString())
+    })
+    
+    // Wait a bit longer for fallback
+    let attempts = 0
+    while (attempts < 15) {
+      try {
+        const status = await checkServerStatus()
+        if (status.isReady) {
+          console.log("Fallback server is ready")
+          return
+        }
+      } catch (error) {
+        console.log(`Fallback server not ready yet (attempt ${attempts + 1}/15)`)
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      attempts++
+    }
+    
+    throw new Error("Fallback server also failed to start")
+    
+  } catch (error) {
+    console.error("Fallback server startup failed:", error)
+    throw error
+  }
 }
 
 // Helper function to check server status

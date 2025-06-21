@@ -436,8 +436,19 @@ process.on('SIGTERM', async () => {
 });
 
 // Initialize the server if this file is run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  persistentServer.initialize().catch(console.error);
+// Windows-compatible check for direct execution
+const isDirectExecution = process.argv[1] && (
+  process.argv[1].endsWith('persistent-server.ts') ||
+  process.argv[1].endsWith('persistent-server.js') ||
+  process.argv[1].includes('persistent-server')
+);
+
+if (isDirectExecution) {
+  console.log(chalk.blue("🚀 Starting persistent server directly..."));
+  persistentServer.initialize().catch((error) => {
+    console.error(chalk.red("❌ Failed to initialize persistent server:"), error);
+    process.exit(1);
+  });
 }
 
 export default persistentServer;
