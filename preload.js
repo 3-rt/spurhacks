@@ -40,6 +40,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('stagehand-stream', (event, data) => callback(data));
     },
     
+    // Memory management
+    addMemory: (memoryData) => ipcRenderer.invoke('add-memory', memoryData),
+    searchMemories: (query, limit) => ipcRenderer.invoke('search-memories', query, limit),
+    getAllMemories: () => ipcRenderer.invoke('get-all-memories'),
+    getMemoryStats: () => ipcRenderer.invoke('get-memory-stats'),
+    updateMemory: (id, updates) => ipcRenderer.invoke('update-memory', id, updates),
+    deleteMemory: (id) => ipcRenderer.invoke('delete-memory', id),
+    clearAllMemories: () => ipcRenderer.invoke('clear-all-memories'),
+    exportMemories: (exportPath) => ipcRenderer.invoke('export-memories', exportPath),
+    importMemories: (importPath) => ipcRenderer.invoke('import-memories', importPath),
+    
+    // Enhanced Stagehand with memory integration
+    executeStagehandWithMemory: (userQuery) => ipcRenderer.invoke('execute-stagehand-with-memory', userQuery),
+    
     // Remove listeners
     removeAllListeners: (channel) => {
         ipcRenderer.removeAllListeners(channel);

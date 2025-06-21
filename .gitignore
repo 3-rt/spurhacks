@@ -21,3 +21,5 @@ yarn-error.log*
 Thumbs.db 
 stagehand-browser/automation-results.png
 *.wav
+
+public/memory.json

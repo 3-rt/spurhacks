@@ -4,6 +4,7 @@ const { spawn } = require("child_process")
 const fs = require("fs")
 const os = require("os")
 const Groq = require("groq-sdk")
+const MemoryManager = require("./memory-manager.js")
 
 // Load environment variables from .env file
 require('dotenv').config({ path: path.join(__dirname, 'stagehand-browser', '.env') })
@@ -19,6 +20,7 @@ const groq = new Groq({
 })
 
 let mainWindow
+let memoryManager = new MemoryManager()
 
 function createWindow() {
   // Get screen size to position the window in top right
@@ -250,6 +252,290 @@ function createWindow() {
   // Legacy handler for backward compatibility
   ipcMain.handle("execute-stagehand", async (event, userQuery) => {
     return await ipcMain.handle("execute-stagehand-task", event, userQuery)
+  })
+
+  // Memory management handlers
+  ipcMain.handle("add-memory", async (event, memoryData) => {
+    try {
+      const memory = await memoryManager.addMemory(memoryData)
+      return { success: true, memory }
+    } catch (error) {
+      console.error("Error adding memory:", error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("search-memories", async (event, query, limit = 5) => {
+    try {
+      const memories = await memoryManager.searchMemories(query, limit)
+      return { success: true, memories }
+    } catch (error) {
+      console.error("Error searching memories:", error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("get-all-memories", async (event) => {
+    try {
+      const memories = await memoryManager.getAllMemories()
+      return { success: true, memories }
+    } catch (error) {
+      console.error("Error getting all memories:", error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("get-memory-stats", async (event) => {
+    try {
+      const stats = await memoryManager.getMemoryStats()
+      return { success: true, stats }
+    } catch (error) {
+      console.error("Error getting memory stats:", error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("update-memory", async (event, id, updates) => {
+    try {
+      const memory = await memoryManager.updateMemory(id, updates)
+      return { success: true, memory }
+    } catch (error) {
+      console.error("Error updating memory:", error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("delete-memory", async (event, id) => {
+    try {
+      const memory = await memoryManager.deleteMemory(id)
+      return { success: true, memory }
+    } catch (error) {
+      console.error("Error deleting memory:", error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("clear-all-memories", async (event) => {
+    try {
+      const result = await memoryManager.clearAllMemories()
+      return result
+    } catch (error) {
+      console.error("Error clearing memories:", error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("export-memories", async (event, exportPath) => {
+    try {
+      const success = await memoryManager.exportMemories(exportPath)
+      return { success }
+    } catch (error) {
+      console.error("Error exporting memories:", error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("import-memories", async (event, importPath) => {
+    try {
+      const success = await memoryManager.importMemories(importPath)
+      return { success }
+    } catch (error) {
+      console.error("Error importing memories:", error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  // Enhanced Stagehand execution with memory integration
+  ipcMain.handle("execute-stagehand-with-memory", async (event, userQuery) => {
+    try {
+      console.log("Executing Stagehand task with memory context:", userQuery)
+      
+      // Search for relevant memories
+      const relevantMemories = await memoryManager.searchMemories(userQuery, 3)
+      let memoryContext = ""
+      let enhancedQuery = userQuery
+      
+      if (relevantMemories.length > 0) {
+        console.log(`🧠 Found ${relevantMemories.length} relevant memories for context`)
+        
+        // Use the memory-based enhancement
+        enhancedQuery = await memoryManager.enhanceQueryWithMemories(userQuery, relevantMemories)
+        
+        // Create memory context for the agent
+        memoryContext = "\n\n🧠 MEMORY CONTEXT - Previous actions that match your request:\n"
+        
+        for (const memory of relevantMemories) {
+          const date = new Date(memory.timestamp).toLocaleDateString()
+          memoryContext += `📅 ${date}: ${memory.description}\n`
+          
+          // Extract any useful details from the memory dynamically
+          if (memory.details && typeof memory.details === 'object') {
+            // Add any key-value pairs from details that might be useful
+            const usefulDetails = Object.entries(memory.details)
+              .filter(([key, value]) => {
+                // Skip internal fields and focus on user-relevant information
+                const skipKeys = ['timestamp', 'success', 'source', 'result'];
+                return !skipKeys.includes(key) && value && typeof value === 'string' && value.length > 0;
+              })
+              .map(([key, value]) => `   ${key}: ${value}`)
+              .join('\n')
+            
+            if (usefulDetails) {
+              memoryContext += usefulDetails + '\n'
+            }
+          }
+          memoryContext += "\n"
+        }
+        
+        console.log(`🔄 Enhanced query: "${enhancedQuery}"`)
+      } else {
+        console.log("🧠 No relevant memories found for this query")
+      }
+      
+      // Set the environment variable for the user query with memory context
+      process.env.USER_QUERY = userQuery
+      process.env.MEMORY_CONTEXT = memoryContext
+      process.env.ENHANCED_QUERY = enhancedQuery
+      
+      // Run the Stagehand script with memory context
+      return new Promise((resolve, reject) => {
+        const stagehandProcess = spawn("npm", ["run", "start"], {
+          cwd: path.join(__dirname, "stagehand-browser"),
+          env: { 
+            ...process.env, 
+            USER_QUERY: userQuery,
+            MEMORY_CONTEXT: memoryContext,
+            ENHANCED_QUERY: enhancedQuery
+          },
+          shell: true,
+          stdio: ['pipe', 'pipe', 'pipe']
+        })
+        
+        let output = ""
+        let errorOutput = ""
+        
+        stagehandProcess.stdout.on("data", (data) => {
+          const newOutput = data.toString()
+          output += newOutput
+          console.log("Stagehand output:", newOutput)
+          
+          // Parse the output line by line to detect COT events
+          const lines = newOutput.split('\n')
+          lines.forEach(line => {
+            line = line.trim()
+            if (line) {
+              try {
+                // Try to parse as JSON to detect COT events
+                const parsed = JSON.parse(line)
+                if (parsed.type === "cot") {
+                  // Send COT event to frontend
+                  mainWindow.webContents.send("stagehand-stream", {
+                    type: "cot",
+                    data: parsed.data,
+                    isComplete: false
+                  })
+                  return // Don't send as regular output
+                }
+              } catch (e) {
+                // Not JSON, treat as regular output
+              }
+              
+              // Send regular output to frontend
+              mainWindow.webContents.send("stagehand-stream", {
+                type: "output",
+                data: line + '\n',
+                isComplete: false
+              })
+            }
+          })
+        })
+        
+        stagehandProcess.stderr.on("data", (data) => {
+          const newError = data.toString()
+          errorOutput += newError
+          console.error("Stagehand error:", newError)
+          
+          // Send error updates to the frontend
+          mainWindow.webContents.send("stagehand-stream", {
+            type: "error",
+            data: newError,
+            isComplete: false
+          })
+        })
+        
+        stagehandProcess.on("close", async (code) => {
+          if (code === 0) {
+            // Save the result as a memory
+            const resultMemory = {
+              type: "action",
+              category: "automation",
+              description: `Executed: ${enhancedQuery}`,
+              details: {
+                query: userQuery,
+                enhancedQuery: enhancedQuery,
+                result: output,
+                exit_code: code,
+                success: true
+              },
+              tags: ["stagehand", "automation", "execution"],
+              relatedQueries: [userQuery, enhancedQuery]
+            }
+            
+            await memoryManager.addMemory(resultMemory)
+            
+            // If the result contains specific information, store it separately
+            if (output.length > 0) {
+              const infoMemory = {
+                type: "information",
+                category: "automation",
+                description: `Information from: ${enhancedQuery}`,
+                details: {
+                  extractedInfo: output,
+                  source: "agent_execution",
+                  timestamp: new Date().toISOString()
+                },
+                tags: ["information", "extracted", "stagehand"],
+                relatedQueries: [userQuery, enhancedQuery]
+              }
+              
+              await memoryManager.addMemory(infoMemory)
+            }
+            
+            // Send completion signal
+            mainWindow.webContents.send("stagehand-stream", {
+              type: "complete",
+              data: output,
+              isComplete: true,
+              success: true
+            })
+            resolve({ success: true, agentResult: output, error: null })
+          } else {
+            // Send error completion signal
+            mainWindow.webContents.send("stagehand-stream", {
+              type: "complete",
+              data: errorOutput,
+              isComplete: true,
+              success: false
+            })
+            reject(new Error(`Stagehand process exited with code ${code}: ${errorOutput}`))
+          }
+        })
+        
+        stagehandProcess.on("error", (error) => {
+          // Send error completion signal
+          mainWindow.webContents.send("stagehand-stream", {
+            type: "complete",
+            data: error.message,
+            isComplete: true,
+            success: false
+          })
+          reject(error)
+        })
+      })
+    } catch (error) {
+      console.error("Error executing Stagehand task with memory:", error)
+      return { success: false, agentResult: null, error: error.message }
+    }
   })
 
   // Handle audio file saving
