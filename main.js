@@ -4,6 +4,7 @@ const { spawn } = require("child_process")
 const fs = require("fs")
 const os = require("os")
 const Groq = require("groq-sdk")
+const MemoryManager = require("./memory-manager.js")
 
 // Load environment variables from .env file
 require('dotenv').config({ path: path.join(__dirname, 'stagehand-browser', '.env') })
@@ -19,8 +20,12 @@ const groq = new Groq({
 })
 
 let mainWindow
+let memoryManager
 
 function createWindow() {
+  // Initialize memory manager
+  memoryManager = new MemoryManager()
+  
   // Get screen size to position the window in top right
   const primaryDisplay = screen.getPrimaryDisplay()
   const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
@@ -261,6 +266,57 @@ function createWindow() {
         success: false,
         error: error.message
       }
+    }
+  })
+
+  // Memory management handlers
+  ipcMain.handle("get-memory-stats", async () => {
+    try {
+      const stats = await memoryManager.getMemoryStats()
+      return { success: true, stats }
+    } catch (error) {
+      console.error("Error getting memory stats:", error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("search-memories", async (event, { query, limit = 5 }) => {
+    try {
+      const memories = await memoryManager.searchMemories(query, limit)
+      return { success: true, memories }
+    } catch (error) {
+      console.error("Error searching memories:", error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("get-all-memories", async () => {
+    try {
+      const memories = await memoryManager.getAllMemories()
+      return { success: true, memories }
+    } catch (error) {
+      console.error("Error getting all memories:", error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("clear-all-memories", async () => {
+    try {
+      const result = await memoryManager.clearAllMemories()
+      return result
+    } catch (error) {
+      console.error("Error clearing memories:", error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("delete-memory", async (event, { memoryId }) => {
+    try {
+      const result = await memoryManager.deleteMemory(memoryId)
+      return result
+    } catch (error) {
+      console.error("Error deleting memory:", error)
+      return { success: false, error: error.message }
     }
   })
 }

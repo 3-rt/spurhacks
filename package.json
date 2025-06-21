@@ -4,6 +4,8 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "setup-memory": "node setup-sample-memory.js",
+    "test-memory": "node test-memory-search.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -14,7 +16,9 @@
   },
   "dependencies": {
     "@browserbasehq/stagehand": "^2.3.1",
+    "@supabase/supabase-js": "^2.50.0",
     "dotenv": "^16.5.0",
-    "groq-sdk": "^0.3.0"
+    "groq-sdk": "^0.3.0",
+    "mongodb": "^6.17.0"
   }
 }
