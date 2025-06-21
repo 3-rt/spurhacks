@@ -27,14 +27,73 @@ class MemoryManager {
     const memories = await this.getAllMemories();
     const queryLower = query.toLowerCase();
     
+    // Check for time-based or "same" queries
+    const isTimeBasedQuery = queryLower.includes("yesterday") || 
+                            queryLower.includes("last week") || 
+                            queryLower.includes("earlier") || 
+                            queryLower.includes("same") ||
+                            queryLower.includes("previous");
+    
     const relevantMemories = memories
       .filter(memory => {
-        return memory.description.toLowerCase().includes(queryLower) ||
-               memory.category.toLowerCase().includes(queryLower) ||
-               memory.tags.some(tag => tag.toLowerCase().includes(queryLower)) ||
-               memory.relatedQueries.some(q => q.toLowerCase().includes(queryLower));
+        // Basic keyword matching
+        const basicMatch = memory.description.toLowerCase().includes(queryLower) ||
+                          memory.category.toLowerCase().includes(queryLower) ||
+                          memory.tags.some(tag => tag.toLowerCase().includes(queryLower)) ||
+                          memory.relatedQueries.some(q => q.toLowerCase().includes(queryLower));
+        
+        if (basicMatch) return true;
+        
+        // Special handling for time-based queries
+        if (isTimeBasedQuery) {
+          // For "same stock" queries, look for stock-related memories
+          if (queryLower.includes("stock") && memory.category === "finance") {
+            return true;
+          }
+          
+          // For "same food" queries, look for food-related memories
+          if ((queryLower.includes("food") || queryLower.includes("dinner") || queryLower.includes("lunch")) && 
+              memory.category === "shopping" && memory.details?.restaurant_chain) {
+            return true;
+          }
+          
+          // For "same restaurant" queries, look for restaurant memories
+          if (queryLower.includes("restaurant") && memory.details?.restaurant_chain) {
+            return true;
+          }
+          
+          // For "yesterday" queries, prioritize recent memories (within last 2 days)
+          if (queryLower.includes("yesterday")) {
+            const entryDate = new Date(memory.timestamp);
+            const now = new Date();
+            const daysDiff = (now.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24);
+            if (daysDiff <= 2) {
+              return true;
+            }
+          }
+          
+          // For "last week" queries, prioritize memories from last 7 days
+          if (queryLower.includes("last week")) {
+            const entryDate = new Date(memory.timestamp);
+            const now = new Date();
+            const daysDiff = (now.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24);
+            if (daysDiff <= 7) {
+              return true;
+            }
+          }
+        }
+        
+        return false;
       })
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .sort((a, b) => {
+        // Enhanced sorting for time-based queries
+        if (isTimeBasedQuery) {
+          // Prioritize by recency for time-based queries
+          return new Date(b.timestamp) - new Date(a.timestamp);
+        }
+        // Default sorting by recency
+        return new Date(b.timestamp) - new Date(a.timestamp);
+      })
       .slice(0, limit);
     
     return relevantMemories;

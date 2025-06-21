@@ -4,6 +4,12 @@ import chalk from "chalk";
 import boxen from "boxen";
 import path from "path";
 import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Import the JavaScript memory manager with proper ES module handling
 const require = createRequire(import.meta.url);
@@ -174,7 +180,7 @@ When you complete actions, make sure to extract and remember important details l
                 ...actionMemory
             };
             
-            // Read current memory file
+            // Read current memory file using proper ES module path
             const fs = require('fs').promises;
             const memoryPath = path.join(__dirname, '..', 'public', 'memory.json');
             let memoryData;
@@ -219,6 +225,8 @@ When you complete actions, make sure to extract and remember important details l
             
         } catch (memoryError) {
             console.error(chalk.red("❌ Error saving to memory:"), memoryError);
+            console.error(chalk.red("❌ Error details:"), memoryError instanceof Error ? memoryError.message : String(memoryError));
+            console.error(chalk.red("❌ Error stack:"), memoryError instanceof Error ? memoryError.stack : 'No stack trace');
         }
         
         // Take a screenshot of the final results
