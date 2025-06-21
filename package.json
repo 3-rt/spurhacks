@@ -42,12 +42,14 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.27.6",
+    "@browserbasehq/stagehand": "^2.3.1",
     "@tailwindcss/postcss": "^4.1.10",
     "electron-squirrel-startup": "^1.0.1",
     "postcss": "^8.5.6",
     "postcss-loader": "^8.1.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "tailwindcss": "^4.1.10"
+    "tailwindcss": "^4.1.10",
+    "zod": "^3.25.67"
   }
 }
