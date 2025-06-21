@@ -35,7 +35,7 @@ async function main({
 	Do not ask follow up questions, the user will trust your judgement.`,
     });
 
-    await agent.execute("navigate to the youtube and find the latest music video");
+    await agent.execute("go to yahoo finance, find the stock price of Nvidia, and return the price in USD");
 }
 
 /**
@@ -50,21 +50,6 @@ async function run() {
     });
     await stagehand.init();
 
-    if (StagehandConfig.env === "BROWSERBASE" && stagehand.browserbaseSessionID) {
-        console.log(
-            boxen(
-                `View this session live in your browser: \n${chalk.blue(
-                    `https://browserbase.com/sessions/${stagehand.browserbaseSessionID}`,
-                )}`,
-                {
-                    title: "Browserbase",
-                    padding: 1,
-                    margin: 3,
-                },
-            ),
-        );
-    }
-
     const page = stagehand.page;
     const context = stagehand.context;
     const result = await main({
@@ -73,13 +58,6 @@ async function run() {
         stagehand,
     });
     await stagehand.close();
-
-    stagehand.log({
-        category: "create-browser-app",
-        message: `\n🤘 Thanks so much for using Stagehand! Reach out to us on Slack if you have any feedback: ${chalk.blue(
-            "https://stagehand.dev/slack",
-        )}\n`,
-    });
 
     return result;
 }
