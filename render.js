@@ -10,7 +10,6 @@ const micBtn = document.getElementById("mic-btn")
 const micText = document.getElementById("mic-text")
 const recordingStatus = document.getElementById("recording-status")
 const recordingTime = document.getElementById("recording-time")
-const stopRecordingBtn = document.getElementById("stop-recording")
 
 // State
 let isExpanded = false
@@ -122,10 +121,6 @@ micBtn.addEventListener("click", () => {
   } else {
     stopRecording()
   }
-})
-
-stopRecordingBtn.addEventListener("click", () => {
-  stopRecording()
 })
 
 // Message input handling
@@ -344,22 +339,47 @@ async function startRecording() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     
+    // Try different MIME types for better compatibility
+    let mimeType = 'audio/webm;codecs=opus'
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = 'audio/webm'
+    }
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = 'audio/mp4'
+    }
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = '' // Let browser choose default
+    }
+    
     mediaRecorder = new MediaRecorder(stream, {
-      mimeType: 'audio/webm;codecs=opus'
+      mimeType: mimeType
     })
     
     audioChunks = []
     
     mediaRecorder.ondataavailable = (event) => {
-      audioChunks.push(event.data)
+      if (event.data.size > 0) {
+        audioChunks.push(event.data)
+      }
     }
     
     mediaRecorder.onstop = async () => {
-      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' })
-      await saveAudioFile(audioBlob)
-      
-      // Stop all tracks to release microphone
-      stream.getTracks().forEach(track => track.stop())
+      try {
+        const audioBlob = new Blob(audioChunks, { type: mimeType || 'audio/webm' })
+        await saveAudioFile(audioBlob)
+      } catch (error) {
+        console.error("Error processing recorded audio:", error)
+        addMessage("❌ Error processing recorded audio", "assistant")
+      } finally {
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach(track => track.stop())
+      }
+    }
+    
+    mediaRecorder.onerror = (event) => {
+      console.error("MediaRecorder error:", event.error)
+      addMessage("❌ Recording error occurred", "assistant")
+      stopRecording()
     }
     
     mediaRecorder.start()
@@ -380,7 +400,13 @@ async function startRecording() {
     
   } catch (error) {
     console.error("Error starting recording:", error)
-    addMessage("❌ Failed to start recording. Please check microphone permissions.", "assistant")
+    if (error.name === 'NotAllowedError') {
+      addMessage("❌ Microphone access denied. Please allow microphone permissions.", "assistant")
+    } else if (error.name === 'NotFoundError') {
+      addMessage("❌ No microphone found. Please connect a microphone and try again.", "assistant")
+    } else {
+      addMessage("❌ Failed to start recording. Please check microphone permissions.", "assistant")
+    }
   }
 }
 
@@ -425,7 +451,7 @@ async function saveAudioFile(audioBlob) {
     const wavBlob = await convertToWav(audioBlob)
     
     // Send to main process to save file
-    const result = await ipcRenderer.invoke("save-audio-file", {
+    const result = await window.electronAPI.saveAudioFile({
       buffer: await wavBlob.arrayBuffer(),
       filename: `recording_${new Date().toISOString().replace(/[:.]/g, '-')}.wav`
     })
@@ -442,17 +468,23 @@ async function saveAudioFile(audioBlob) {
 }
 
 async function convertToWav(webmBlob) {
-  // Create audio context
-  const audioContext = new (window.AudioContext || window.webkitAudioContext)()
-  
-  // Decode the webm audio
-  const arrayBuffer = await webmBlob.arrayBuffer()
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
-  
-  // Convert to WAV format
-  const wavBuffer = audioBufferToWav(audioBuffer)
-  
-  return new Blob([wavBuffer], { type: 'audio/wav' })
+  try {
+    // Create audio context
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+    
+    // Decode the webm audio
+    const arrayBuffer = await webmBlob.arrayBuffer()
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+    
+    // Convert to WAV format
+    const wavBuffer = audioBufferToWav(audioBuffer)
+    
+    return new Blob([wavBuffer], { type: 'audio/wav' })
+  } catch (error) {
+    console.error("Error converting to WAV:", error)
+    // Fallback: return original blob if conversion fails
+    return webmBlob
+  }
 }
 
 function audioBufferToWav(buffer) {

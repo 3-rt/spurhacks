@@ -11,6 +11,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     collapseWindow: () => ipcRenderer.invoke('collapse-window'),
     setWindowPosition: (x, y) => ipcRenderer.invoke('set-window-position', x, y),
     
+    // Audio recording
+    saveAudioFile: (data) => ipcRenderer.invoke('save-audio-file', data),
+    
     // Stagehand YouTube automation
     startStagehandYouTube: () => ipcRenderer.invoke('start-stagehand-youtube'),
     checkStagehandStatus: () => ipcRenderer.invoke('check-stagehand-status'),
