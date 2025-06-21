@@ -19,6 +19,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     startStagehandYouTube: () => ipcRenderer.invoke('start-stagehand-youtube'),
     checkStagehandStatus: () => ipcRenderer.invoke('check-stagehand-status'),
     
+    // Memory management
+    getMemoryStats: () => ipcRenderer.invoke('get-memory-stats'),
+    searchMemories: (query, limit) => ipcRenderer.invoke('search-memories', { query, limit }),
+    getAllMemories: () => ipcRenderer.invoke('get-all-memories'),
+    clearAllMemories: () => ipcRenderer.invoke('clear-all-memories'),
+    deleteMemory: (memoryId) => ipcRenderer.invoke('delete-memory', { memoryId }),
+    
     // Listen for Stagehand output
     onStagehandOutput: (callback) => {
         ipcRenderer.on('stagehand-output', (event, data) => callback(data));

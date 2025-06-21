@@ -1,3 +1,6 @@
+# Ignore all .env files in public folder
+**/.env
+
 # Dependencies
 /node_modules
 /stagehand-browser/node_modules
@@ -21,3 +24,6 @@ yarn-error.log*
 Thumbs.db 
 stagehand-browser/automation-results.png
 *.wav
+
+# Public folder
+public/memory.json
