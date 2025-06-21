@@ -2,7 +2,12 @@ import { Stagehand, Page, BrowserContext } from "@browserbasehq/stagehand";
 import StagehandConfig from "./stagehand.config.js";
 import chalk from "chalk";
 import boxen from "boxen";
-import { MemoryManager, MemoryHelpers } from "./memory.js";
+import path from "path";
+import { createRequire } from 'module';
+
+// Import the JavaScript memory manager with proper ES module handling
+const require = createRequire(import.meta.url);
+const MemoryManager = require("../memory-manager.js");
 
 /**
  * 🤘 Welcome to Stagehand! Thanks so much for trying us out!
@@ -31,7 +36,6 @@ async function main({
     try {
         // Initialize memory system
         const memoryManager = new MemoryManager();
-        await memoryManager.initialize();
         
         // Get user query from environment variable
         const userQuery = process.env.USER_QUERY || "go to yahoo finance, find the stock price of Nvidia, and return the price in USD";
@@ -46,7 +50,7 @@ async function main({
         if (relevantMemories.length > 0) {
             console.log(chalk.cyan(`🧠 Found ${relevantMemories.length} relevant memories:`));
             
-            // Create a more direct memory context
+            // Create a simple memory context
             memoryContext = "\n\n🧠 MEMORY CONTEXT - Previous actions that match your request:\n";
             
             for (const memory of relevantMemories) {
@@ -57,7 +61,7 @@ async function main({
                 if (memory.details) {
                     if (memory.details.stock_symbol) {
                         memoryContext += `   Stock Symbol: ${memory.details.stock_symbol}\n`;
-                        // Directly enhance the query with the stock symbol
+                        // Enhance the query with the stock symbol
                         if (userQuery.toLowerCase().includes("same stock") || 
                             userQuery.toLowerCase().includes("yesterday") ||
                             userQuery.toLowerCase().includes("stock") && userQuery.toLowerCase().includes("same")) {
@@ -69,7 +73,7 @@ async function main({
                     }
                     if (memory.details.restaurant_chain) {
                         memoryContext += `   Restaurant: ${memory.details.restaurant_chain}\n`;
-                        // Directly enhance food queries
+                        // Enhance food queries
                         if (userQuery.toLowerCase().includes("same food") || 
                             userQuery.toLowerCase().includes("dinner") || 
                             userQuery.toLowerCase().includes("last week") ||
@@ -148,34 +152,69 @@ When you complete actions, make sure to extract and remember important details l
         
         // Extract and store important information in memory
         try {
-            // Create memory entry for this action
-            const actionMemory = MemoryHelpers.createActionMemory(
-                `Executed: ${enhancedQuery}`,
-                {
+            // Create a simple memory entry for this action
+            const actionMemory = {
+                type: "action",
+                category: "general",
+                description: `Executed: ${enhancedQuery}`,
+                details: {
                     result: result,
                     timestamp: new Date().toISOString(),
                     success: true
                 },
-                enhancedQuery
-            );
+                tags: ["action", "execution"],
+                relatedQueries: [enhancedQuery]
+            };
             
-            await memoryManager.addMemory(actionMemory);
+            // Add to memory using the simple method
+            const allMemories = await memoryManager.getAllMemories();
+            const newMemory = {
+                id: `mem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                timestamp: new Date().toISOString(),
+                ...actionMemory
+            };
             
-            // If the result contains specific information (like prices, URLs, etc.), store it separately
+            // Read current memory file
+            const fs = require('fs').promises;
+            const memoryPath = path.join(__dirname, '..', 'public', 'memory.json');
+            let memoryData;
+            try {
+                const data = await fs.readFile(memoryPath, 'utf-8');
+                memoryData = JSON.parse(data);
+            } catch (error) {
+                memoryData = {
+                    entries: [],
+                    lastUpdated: new Date().toISOString(),
+                    version: "1.0.0"
+                };
+            }
+            
+            memoryData.entries.push(newMemory);
+            memoryData.lastUpdated = new Date().toISOString();
+            
+            await fs.writeFile(memoryPath, JSON.stringify(memoryData, null, 2));
+            console.log(chalk.blue(`💾 Memory saved: ${actionMemory.description}`));
+            
+            // If the result contains specific information, store it separately
             const resultString = String(result || '');
             if (resultString.length > 0) {
-                // Try to extract specific information from the result
-                const infoMemory = MemoryHelpers.createInformationMemory(
-                    `Information from: ${enhancedQuery}`,
-                    {
+                const infoMemory = {
+                    id: `mem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    timestamp: new Date().toISOString(),
+                    type: "information",
+                    category: "general",
+                    description: `Information from: ${enhancedQuery}`,
+                    details: {
                         extractedInfo: resultString,
                         source: "agent_execution",
                         timestamp: new Date().toISOString()
                     },
-                    enhancedQuery
-                );
+                    tags: ["information", "extracted"],
+                    relatedQueries: [enhancedQuery]
+                };
                 
-                await memoryManager.addMemory(infoMemory);
+                memoryData.entries.push(infoMemory);
+                await fs.writeFile(memoryPath, JSON.stringify(memoryData, null, 2));
             }
             
         } catch (memoryError) {
@@ -190,7 +229,7 @@ When you complete actions, make sure to extract and remember important details l
         console.log(chalk.green("📸 Screenshot saved as automation-results.png"));
         
         // Display memory statistics
-        const stats = memoryManager.getMemoryStats();
+        const stats = await memoryManager.getMemoryStats();
         console.log(chalk.cyan(`📊 Memory Stats: ${stats.total} total entries`));
         
         return {
@@ -198,14 +237,15 @@ When you complete actions, make sure to extract and remember important details l
             userQuery,
             agentResult: result,
             memoryContext: relevantMemories.length > 0 ? relevantMemories : null,
-            memoryStats: stats
+            enhancedQuery
         };
         
     } catch (error) {
-        console.error(chalk.red("❌ Error during AI automation:"), error);
+        console.error(chalk.red("❌ Error in main function:"), error instanceof Error ? error.message : String(error));
         return {
             success: false,
-            error: error instanceof Error ? error.message : String(error)
+            error: error instanceof Error ? error.message : String(error),
+            userQuery: process.env.USER_QUERY || "unknown"
         };
     }
 }

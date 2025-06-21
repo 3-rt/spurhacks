@@ -26,4 +26,4 @@ stagehand-browser/automation-results.png
 *.wav
 
 # Public folder
-public/**
+public/memory.json

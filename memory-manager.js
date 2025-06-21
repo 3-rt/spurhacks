@@ -2,7 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 
 class MemoryManager {
-  constructor(memoryFilePath = 'public/memory.json') {
+  constructor(memoryFilePath = path.join(__dirname, 'public', 'memory.json')) {
     this.memoryFilePath = memoryFilePath;
   }
 

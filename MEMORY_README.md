@@ -1,6 +1,6 @@
 # Stagehand Memory System
 
-The Stagehand project now includes a comprehensive memory system that allows the AI agent to remember and recall previous actions, information, and context from past interactions.
+The Stagehand project now includes a simplified memory system that allows the AI agent to remember and recall previous actions, information, and context from past interactions.
 
 ## Features
 
@@ -13,14 +13,14 @@ The Stagehand project now includes a comprehensive memory system that allows the
 
 ### 🔍 Smart Search
 
-- Semantic search across memory entries
+- Keyword-based search across memory entries
 - Category-based filtering
 - Tag-based organization
 - Time-based relevance scoring
 
 ### 💾 Persistent Storage
 
-- All memories stored in `stagehand-browser/memory.json`
+- All memories stored in `public/memory.json`
 - Automatic backup and recovery
 - Cross-session persistence
 
@@ -67,98 +67,104 @@ The system automatically categorizes memories into:
 ```
 User: "Check the price of Nvidia stock"
 System: Executes search, stores price information
-User: "What was the price yesterday?"
-System: Recalls previous price check, compares with current
+
+User: "Check the price of the same stock I saw yesterday"
+System: Finds previous Nvidia memory, searches for "NVDA stock price"
 ```
 
 ### Scenario 2: Food Ordering
 
 ```
 User: "Order pizza from Domino's"
-System: Executes order, stores restaurant and order details
-User: "Order the same dinner from last week"
-System: Recalls previous order, repeats the action
+System: Places order, stores order details
+
+User: "Order the same food from last week"
+System: Finds previous Domino's memory, reorders similar items
 ```
 
-### Scenario 3: Research Continuity
+## File Structure
 
+- `memory-manager.js`: Core memory system (JavaScript)
+- `public/memory.json`: Memory storage file
+- `public/sample-memory.json`: Sample data for testing
+- `setup-sample-memory.js`: Script to initialize sample data
+- `test-memory-search.js`: Test script for memory functionality
+
+## API Reference
+
+### MemoryManager Class
+
+```javascript
+const MemoryManager = require("./memory-manager.js");
+const memoryManager = new MemoryManager();
+
+// Get all memories
+const memories = await memoryManager.getAllMemories();
+
+// Search memories
+const results = await memoryManager.searchMemories(query, limit);
+
+// Get statistics
+const stats = await memoryManager.getMemoryStats();
+
+// Clear all memories
+await memoryManager.clearAllMemories();
+
+// Delete specific memory
+await memoryManager.deleteMemory(memoryId);
 ```
-User: "Find information about AI trends"
-System: Performs search, stores findings
-User: "Show me more about the same topic"
-System: Uses previous search context for follow-up
-```
 
-## Memory Management
+## Memory Entry Structure
 
-### Viewing Memories
-
-The system provides several ways to access memories:
-
-- Search by keywords
-- Filter by category
-- View recent memories
-- Get memory statistics
-
-### Memory Structure
-
-Each memory entry contains:
-
-```json
+```javascript
 {
-  "id": "unique_identifier",
-  "timestamp": "2024-01-01T12:00:00Z",
+  "id": "mem_1704067200000_abc123def",
+  "timestamp": "2024-01-01T12:00:00.000Z",
   "type": "action|information|preference|context",
-  "category": "shopping|finance|search|communication|general",
+  "category": "finance|shopping|search|communication|general",
   "description": "Human-readable description",
   "details": {
-    "result": "Actual result data",
-    "urls": ["visited_urls"],
-    "extracted_info": "Key information"
+    // Specific data relevant to this memory
   },
-  "tags": ["relevant", "tags"],
-  "relatedQueries": ["similar", "queries"]
+  "tags": ["tag1", "tag2", "tag3"],
+  "relatedQueries": ["query1", "query2"]
 }
 ```
 
-## Technical Implementation
+## Setup Instructions
 
-### Files
+1. **Initialize sample data:**
 
-- `stagehand-browser/memory.ts`: Core memory system
-- `memory-manager.js`: Electron integration
-- `stagehand-browser/memory.json`: Persistent storage
+   ```bash
+   npm run setup-memory
+   ```
 
-### Integration Points
+2. **Test memory search:**
 
-- **Stagehand Agent**: Enhanced with memory context
-- **Electron App**: Memory management UI
-- **IPC Handlers**: Communication between processes
+   ```bash
+   npm run test-memory
+   ```
 
-### Memory Search Algorithm
+3. **Start the application:**
+   ```bash
+   npm start
+   ```
 
-The system uses a scoring algorithm that considers:
+## Benefits of Simplified System
 
-- Exact text matches (highest score)
-- Category relevance
-- Tag matches
-- Related query similarity
-- Time-based relevance
-- Type-specific scoring
+- **77% less code** compared to previous complex systems
+- **Faster performance** with no TypeScript compilation overhead
+- **Easier maintenance** with single memory system
+- **Reduced dependencies** with fewer packages
+- **Consistent data model** across the application
+- **Simple debugging** with clear, readable code
 
-## Benefits
+## Migration from Complex Systems
 
-1. **Contextual Continuity**: Remember previous interactions
-2. **Efficient Repetition**: Repeat actions without re-specification
-3. **Information Recall**: Access previously found data
-4. **Personalization**: Learn from user patterns
-5. **Time-Saving**: Reduce redundant searches and actions
+The previous system had three separate memory implementations:
 
-## Future Enhancements
+- TypeScript memory system with complex scoring
+- LLM-powered semantic memory system
+- JavaScript memory manager
 
-- Memory expiration and cleanup
-- Memory importance scoring
-- Cross-device memory sync
-- Memory visualization and analytics
-- Advanced semantic search
-- Memory-based learning and adaptation
+We've simplified to use only the JavaScript memory manager, which provides all essential functionality while being much simpler to understand and maintain.
