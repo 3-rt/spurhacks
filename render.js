@@ -7,11 +7,25 @@ const boxContent = document.querySelector("#compact-box > div")
 const messageInput = document.querySelector("input[type='text']")
 const chatContainer = document.querySelector(".flex-1.overflow-y-auto")
 
+// Recording elements
+const micBtn = document.getElementById("mic-btn")
+const micText = document.getElementById("mic-text")
+const recordingStatus = document.getElementById("recording-status")
+const recordingTime = document.getElementById("recording-time")
+const stopRecordingBtn = document.getElementById("stop-recording")
+
 // State
 let isExpanded = false
 let isDragging = false
 let dragStartX = 0
 let dragStartY = 0
+
+// Recording state
+let isRecording = false
+let mediaRecorder = null
+let audioChunks = []
+let recordingStartTime = 0
+let recordingTimer = null
 
 // Initialize the app in compact mode
 function initApp() {
@@ -93,6 +107,19 @@ document.getElementById("maximize-btn").addEventListener("click", () => {
 
 document.getElementById("close-btn").addEventListener("click", () => {
   ipcRenderer.invoke("window-close")
+})
+
+// Microphone recording event listeners
+micBtn.addEventListener("click", () => {
+  if (!isRecording) {
+    startRecording()
+  } else {
+    stopRecording()
+  }
+})
+
+stopRecordingBtn.addEventListener("click", () => {
+  stopRecording()
 })
 
 // Message input handling
@@ -228,6 +255,163 @@ function addMessage(content, type) {
 
   chatContainer.appendChild(messageDiv)
   scrollToBottom()
+}
+
+// Audio recording functions
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    
+    mediaRecorder = new MediaRecorder(stream, {
+      mimeType: 'audio/webm;codecs=opus'
+    })
+    
+    audioChunks = []
+    
+    mediaRecorder.ondataavailable = (event) => {
+      audioChunks.push(event.data)
+    }
+    
+    mediaRecorder.onstop = async () => {
+      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' })
+      await saveAudioFile(audioBlob)
+      
+      // Stop all tracks to release microphone
+      stream.getTracks().forEach(track => track.stop())
+    }
+    
+    mediaRecorder.start()
+    isRecording = true
+    recordingStartTime = Date.now()
+    
+    // Update UI
+    micBtn.classList.add("mic-recording", "recording-glow")
+    micBtn.classList.remove("bg-slate-800/50", "border-slate-700/50", "text-slate-300")
+    micText.textContent = "Recording"
+    recordingStatus.classList.remove("hidden")
+    recordingStatus.classList.add("recording-status")
+    
+    // Start timer
+    startRecordingTimer()
+    
+    addMessage("🎤 Started recording audio...", "assistant")
+    
+  } catch (error) {
+    console.error("Error starting recording:", error)
+    addMessage("❌ Failed to start recording. Please check microphone permissions.", "assistant")
+  }
+}
+
+function stopRecording() {
+  if (!isRecording || !mediaRecorder) return
+  
+  mediaRecorder.stop()
+  isRecording = false
+  
+  // Update UI
+  micBtn.classList.remove("mic-recording", "recording-glow")
+  micBtn.classList.add("bg-slate-800/50", "border-slate-700/50", "text-slate-300")
+  micText.textContent = "Record"
+  recordingStatus.classList.add("hidden")
+  recordingStatus.classList.remove("recording-status")
+  
+  // Stop timer
+  stopRecordingTimer()
+  
+  addMessage("⏹️ Recording stopped. Processing audio...", "assistant")
+}
+
+function startRecordingTimer() {
+  recordingTimer = setInterval(() => {
+    const elapsed = Date.now() - recordingStartTime
+    const minutes = Math.floor(elapsed / 60000)
+    const seconds = Math.floor((elapsed % 60000) / 1000)
+    recordingTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+  }, 1000)
+}
+
+function stopRecordingTimer() {
+  if (recordingTimer) {
+    clearInterval(recordingTimer)
+    recordingTimer = null
+  }
+}
+
+async function saveAudioFile(audioBlob) {
+  try {
+    // Convert to WAV format for better compatibility
+    const wavBlob = await convertToWav(audioBlob)
+    
+    // Send to main process to save file
+    const result = await ipcRenderer.invoke("save-audio-file", {
+      buffer: await wavBlob.arrayBuffer(),
+      filename: `recording_${new Date().toISOString().replace(/[:.]/g, '-')}.wav`
+    })
+    
+    if (result.success) {
+      addMessage(`✅ Audio saved to public folder: ${result.filename}`, "assistant")
+    } else {
+      addMessage("❌ Failed to save audio file", "assistant")
+    }
+  } catch (error) {
+    console.error("Error saving audio:", error)
+    addMessage("❌ Error processing audio file", "assistant")
+  }
+}
+
+async function convertToWav(webmBlob) {
+  // Create audio context
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+  
+  // Decode the webm audio
+  const arrayBuffer = await webmBlob.arrayBuffer()
+  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+  
+  // Convert to WAV format
+  const wavBuffer = audioBufferToWav(audioBuffer)
+  
+  return new Blob([wavBuffer], { type: 'audio/wav' })
+}
+
+function audioBufferToWav(buffer) {
+  const length = buffer.length
+  const numberOfChannels = buffer.numberOfChannels
+  const sampleRate = buffer.sampleRate
+  const arrayBuffer = new ArrayBuffer(44 + length * numberOfChannels * 2)
+  const view = new DataView(arrayBuffer)
+  
+  // WAV header
+  const writeString = (offset, string) => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i))
+    }
+  }
+  
+  writeString(0, 'RIFF')
+  view.setUint32(4, 36 + length * numberOfChannels * 2, true)
+  writeString(8, 'WAVE')
+  writeString(12, 'fmt ')
+  view.setUint32(16, 16, true)
+  view.setUint16(20, 1, true)
+  view.setUint16(22, numberOfChannels, true)
+  view.setUint32(24, sampleRate, true)
+  view.setUint32(28, sampleRate * numberOfChannels * 2, true)
+  view.setUint16(32, numberOfChannels * 2, true)
+  view.setUint16(34, 16, true)
+  writeString(36, 'data')
+  view.setUint32(40, length * numberOfChannels * 2, true)
+  
+  // Convert audio data
+  let offset = 44
+  for (let i = 0; i < length; i++) {
+    for (let channel = 0; channel < numberOfChannels; channel++) {
+      const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]))
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true)
+      offset += 2
+    }
+  }
+  
+  return arrayBuffer
 }
 
 // Initialize the app
