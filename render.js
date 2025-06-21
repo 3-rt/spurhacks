@@ -1,5 +1,3 @@
-const { ipcRenderer } = require("electron")
-
 // DOM elements
 const compactBox = document.getElementById("compact-box")
 const agentContainer = document.getElementById("agent-container")
@@ -12,7 +10,6 @@ const micBtn = document.getElementById("mic-btn")
 const micText = document.getElementById("mic-text")
 const recordingStatus = document.getElementById("recording-status")
 const recordingTime = document.getElementById("recording-time")
-const stopRecordingBtn = document.getElementById("stop-recording")
 
 // Agent cursor elements
 let agentCursor = null
@@ -251,7 +248,7 @@ async function simulateTyping(x, y) {
 // Expand the window and show agent interface
 function expandWindow() {
   isExpanded = true
-  ipcRenderer.invoke("expand-window").then(() => {
+  window.electronAPI.expandWindow().then(() => {
     compactBox.classList.add("opacity-0", "pointer-events-none")
     agentContainer.classList.remove("opacity-0", "pointer-events-none")
     agentContainer.classList.add("opacity-100", "pointer-events-auto")
@@ -261,7 +258,7 @@ function expandWindow() {
 // Collapse the window and show compact box
 function collapseWindow() {
   isExpanded = false
-  ipcRenderer.invoke("collapse-window").then(() => {
+  window.electronAPI.collapseWindow().then(() => {
     compactBox.classList.remove("opacity-0", "pointer-events-none")
     agentContainer.classList.remove("opacity-100", "pointer-events-auto")
     agentContainer.classList.add("opacity-0", "pointer-events-none")
@@ -287,7 +284,7 @@ function handleDrag(e) {
   const deltaY = e.clientY - dragStartY
   
   // Get current window position and update it
-  ipcRenderer.invoke("set-window-position", deltaX, deltaY)
+  window.electronAPI.setWindowPosition(deltaX, deltaY)
 }
 
 function stopDragging() {
@@ -306,21 +303,29 @@ document.addEventListener("keydown", (e) => {
 // Event listeners
 boxContent.addEventListener("mousedown", startDragging)
 
+// Add click event to expand window when clicking on compact box
+boxContent.addEventListener("click", (e) => {
+  // Only expand if not dragging
+  if (!isDragging) {
+    expandWindow()
+  }
+})
+
 // Window control buttons
 document.getElementById("collapse-btn").addEventListener("click", () => {
   collapseWindow()
 })
 
 document.getElementById("minimize-btn").addEventListener("click", () => {
-  ipcRenderer.invoke("window-minimize")
+  window.electronAPI.windowMinimize()
 })
 
 document.getElementById("maximize-btn").addEventListener("click", () => {
-  ipcRenderer.invoke("window-maximize")
+  window.electronAPI.windowMaximize()
 })
 
 document.getElementById("close-btn").addEventListener("click", () => {
-  ipcRenderer.invoke("window-close")
+  window.electronAPI.windowClose()
 })
 
 // Microphone recording event listeners
@@ -332,14 +337,11 @@ micBtn.addEventListener("click", () => {
   }
 })
 
-stopRecordingBtn.addEventListener("click", () => {
-  stopRecording()
-})
-
 // Message input handling
-messageInput.addEventListener("keypress", (e) => {
+messageInput.addEventListener("keypress", async (e) => {
   if (e.key === "Enter" && messageInput.value.trim()) {
-    addMessage(messageInput.value.trim(), "user")
+    const userQuery = messageInput.value.trim()
+    addMessage(userQuery, "user")
     messageInput.value = ""
 
     // Add thinking section
@@ -347,10 +349,84 @@ messageInput.addEventListener("keypress", (e) => {
       addThinkingSection()
     }, 500)
 
-    // Simulate AI response after thinking
-    setTimeout(() => {
-      addMessage("I understand your request! Let me help you with that.", "assistant")
-    }, 3000)
+    try {
+      // Show loading state
+      const loadingMessage = addMessage("Executing your request...", "assistant")
+      
+      // Create a streaming message for real-time updates
+      const streamingMessage = addMessage("", "assistant")
+      let streamingContent = ""
+      
+      // Apply streaming text styles
+      const streamingTextElement = streamingMessage.querySelector(".flex-1")
+      streamingTextElement.classList.add("streaming-text")
+      
+      // Set up real-time streaming listener
+      const streamHandler = (data) => {
+        if (data.type === "output") {
+          streamingContent += data.data
+          streamingTextElement.textContent = streamingContent
+          scrollToBottom()
+        } else if (data.type === "error") {
+          streamingContent += `Error: ${data.data}`
+          streamingTextElement.textContent = streamingContent
+          scrollToBottom()
+        } else if (data.type === "complete") {
+          // Remove the streaming listener
+          window.electronAPI.removeAllListeners('stagehand-stream')
+          
+          if (data.success) {
+            streamingContent += "\n\n✅ Task completed successfully!"
+          } else {
+            streamingContent += "\n\n❌ Task failed"
+          }
+          streamingTextElement.textContent = streamingContent
+          scrollToBottom()
+        }
+      }
+      
+      // Start listening for streaming updates
+      window.electronAPI.onStagehandStream(streamHandler)
+      
+      // Execute Stagehand with the user's query
+      const result = await Promise.race([
+        window.stagehand.executeQuery(userQuery),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Request timed out")), 60000) // 60 second timeout
+        )
+      ])
+      
+      // Remove the thinking section
+      const thinkingSection = chatContainer.querySelector(".bg-slate-900\\/50")
+      if (thinkingSection) {
+        thinkingSection.remove()
+      }
+      
+      // Remove loading message
+      if (loadingMessage) {
+        loadingMessage.remove()
+      }
+      
+      // Clean up streaming listener if not already done
+      window.electronAPI.removeAllListeners('stagehand-stream')
+      
+      if (!result.success) {
+        // Add error message if streaming didn't handle it
+        addMessage(`Error: ${result.error || "Failed to execute task"}`, "assistant")
+      }
+    } catch (error) {
+      // Remove the thinking section
+      const thinkingSection = chatContainer.querySelector(".bg-slate-900\\/50")
+      if (thinkingSection) {
+        thinkingSection.remove()
+      }
+      
+      // Clean up streaming listener
+      window.electronAPI.removeAllListeners('stagehand-stream')
+      
+      // Add error message
+      addMessage(`Error: ${error.message || "Failed to execute task"}`, "assistant")
+    }
   }
 })
 
@@ -469,6 +545,7 @@ function addMessage(content, type) {
 
   chatContainer.appendChild(messageDiv)
   scrollToBottom()
+  return messageDiv
 }
 
 // Audio recording functions
@@ -476,22 +553,47 @@ async function startRecording() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     
+    // Try different MIME types for better compatibility
+    let mimeType = 'audio/webm;codecs=opus'
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = 'audio/webm'
+    }
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = 'audio/mp4'
+    }
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = '' // Let browser choose default
+    }
+    
     mediaRecorder = new MediaRecorder(stream, {
-      mimeType: 'audio/webm;codecs=opus'
+      mimeType: mimeType
     })
     
     audioChunks = []
     
     mediaRecorder.ondataavailable = (event) => {
-      audioChunks.push(event.data)
+      if (event.data.size > 0) {
+        audioChunks.push(event.data)
+      }
     }
     
     mediaRecorder.onstop = async () => {
-      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' })
-      await saveAudioFile(audioBlob)
-      
-      // Stop all tracks to release microphone
-      stream.getTracks().forEach(track => track.stop())
+      try {
+        const audioBlob = new Blob(audioChunks, { type: mimeType || 'audio/webm' })
+        await saveAudioFile(audioBlob)
+      } catch (error) {
+        console.error("Error processing recorded audio:", error)
+        addMessage("❌ Error processing recorded audio", "assistant")
+      } finally {
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach(track => track.stop())
+      }
+    }
+    
+    mediaRecorder.onerror = (event) => {
+      console.error("MediaRecorder error:", event.error)
+      addMessage("❌ Recording error occurred", "assistant")
+      stopRecording()
     }
     
     mediaRecorder.start()
@@ -512,7 +614,13 @@ async function startRecording() {
     
   } catch (error) {
     console.error("Error starting recording:", error)
-    addMessage("❌ Failed to start recording. Please check microphone permissions.", "assistant")
+    if (error.name === 'NotAllowedError') {
+      addMessage("❌ Microphone access denied. Please allow microphone permissions.", "assistant")
+    } else if (error.name === 'NotFoundError') {
+      addMessage("❌ No microphone found. Please connect a microphone and try again.", "assistant")
+    } else {
+      addMessage("❌ Failed to start recording. Please check microphone permissions.", "assistant")
+    }
   }
 }
 
@@ -557,7 +665,7 @@ async function saveAudioFile(audioBlob) {
     const wavBlob = await convertToWav(audioBlob)
     
     // Send to main process to save file
-    const result = await ipcRenderer.invoke("save-audio-file", {
+    const result = await window.electronAPI.saveAudioFile({
       buffer: await wavBlob.arrayBuffer(),
       filename: `recording_${new Date().toISOString().replace(/[:.]/g, '-')}.wav`
     })
@@ -574,17 +682,23 @@ async function saveAudioFile(audioBlob) {
 }
 
 async function convertToWav(webmBlob) {
-  // Create audio context
-  const audioContext = new (window.AudioContext || window.webkitAudioContext)()
-  
-  // Decode the webm audio
-  const arrayBuffer = await webmBlob.arrayBuffer()
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
-  
-  // Convert to WAV format
-  const wavBuffer = audioBufferToWav(audioBuffer)
-  
-  return new Blob([wavBuffer], { type: 'audio/wav' })
+  try {
+    // Create audio context
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+    
+    // Decode the webm audio
+    const arrayBuffer = await webmBlob.arrayBuffer()
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+    
+    // Convert to WAV format
+    const wavBuffer = audioBufferToWav(audioBuffer)
+    
+    return new Blob([wavBuffer], { type: 'audio/wav' })
+  } catch (error) {
+    console.error("Error converting to WAV:", error)
+    // Fallback: return original blob if conversion fails
+    return webmBlob
+  }
 }
 
 function audioBufferToWav(buffer) {

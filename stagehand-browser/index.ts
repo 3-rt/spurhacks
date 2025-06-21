@@ -35,8 +35,8 @@ async function main({
         
         // Create a single web agent that can handle any task
         const agent = stagehand.agent({
-            instructions: `You are a helpful web assistant that can use a browser to complete any task the user requests.\nYou can navigate to any website, search for information, find images, videos, links, or any other content.\nWhen the user asks to save links, extract and clearly present all relevant URLs.\nBe thorough and complete the entire task from start to finish.\nDo not ask the user for any information, just use the browser to complete the task.`,
-        });
+            instructions: `You are a helpful web assistant that can use a browser to compl
+ete any task the user requests.\nYou can navigate to any website, search for information, find images, videos, links, or any other content.\nWhen the user asks to save links, extract and clearly present all relevant URLs.\nBe thorough and complete the entire task from start to finish.\nDo not ask the user for any information, just use the browser to complete the task.`,        });
 
         // Execute the user's query with the agent
         const result = await agent.execute(userQuery);
@@ -95,3 +95,5 @@ export { run as runStagehand };
 
 // Run the app
 run();
+
+// test test 

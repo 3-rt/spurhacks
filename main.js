@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, screen } = require("electron")
 const path = require("path")
+const { spawn } = require("child_process")
 const fs = require("fs")
 const os = require("os")
 
@@ -16,8 +17,9 @@ function createWindow() {
     x: screenWidth - 100, // Position in top right
     y: 20,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
     },
     frame: false,
     transparent: true,
@@ -87,6 +89,89 @@ function createWindow() {
   // Handle window dragging
   ipcMain.handle("set-window-position", (event, x, y) => {
     mainWindow.setPosition(x, y)
+  })
+
+  // Stagehand integration
+  ipcMain.handle("execute-stagehand", async (event, userQuery) => {
+    try {
+      console.log("Executing Stagehand with query:", userQuery)
+      
+      // Set the environment variable for the user query
+      process.env.USER_QUERY = userQuery
+      
+      // Run the Stagehand script
+      return new Promise((resolve, reject) => {
+        const stagehandProcess = spawn("npm", ["run", "start"], {
+          cwd: path.join(__dirname, "stagehand-browser"),
+          env: { ...process.env, USER_QUERY: userQuery }
+        })
+        
+        let output = ""
+        let errorOutput = ""
+        
+        stagehandProcess.stdout.on("data", (data) => {
+          const newOutput = data.toString()
+          output += newOutput
+          console.log("Stagehand output:", newOutput)
+          
+          // Send real-time updates to the frontend
+          mainWindow.webContents.send("stagehand-stream", {
+            type: "output",
+            data: newOutput,
+            isComplete: false
+          })
+        })
+        
+        stagehandProcess.stderr.on("data", (data) => {
+          const newError = data.toString()
+          errorOutput += newError
+          console.error("Stagehand error:", newError)
+          
+          // Send error updates to the frontend
+          mainWindow.webContents.send("stagehand-stream", {
+            type: "error",
+            data: newError,
+            isComplete: false
+          })
+        })
+        
+        stagehandProcess.on("close", (code) => {
+          if (code === 0) {
+            // Send completion signal
+            mainWindow.webContents.send("stagehand-stream", {
+              type: "complete",
+              data: output,
+              isComplete: true,
+              success: true
+            })
+            resolve({ success: true, output: output, error: null })
+          } else {
+            // Send error completion signal
+            mainWindow.webContents.send("stagehand-stream", {
+              type: "complete",
+              data: errorOutput,
+              isComplete: true,
+              success: false
+            })
+            reject(new Error(`Stagehand process exited with code ${code}: ${errorOutput}`))
+          }
+        })
+        
+        stagehandProcess.on("error", (error) => {
+          // Send error completion signal
+          mainWindow.webContents.send("stagehand-stream", {
+            type: "complete",
+            data: error.message,
+            isComplete: true,
+            success: false
+          })
+          reject(error)
+        })
+      })
+    } catch (error) {
+      console.error("Error executing Stagehand:", error)
+      return { success: false, output: null, error: error.message }
+    }
   })
 
   // Handle audio file saving
