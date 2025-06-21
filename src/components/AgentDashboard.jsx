@@ -9,12 +9,16 @@ function AgentDashboard() {
   const [browserUrl] = useState("https://ui.shadcn.com/charts");
 
   return (
-    <div className="flex h-screen bg-black text-gray-300">
+    <div className="flex h-full bg-black text-gray-300">
       {/* Left Sidebar */}
-      <div className="w-80 border-r border-gray-800 bg-gray-950/50">
-        <div className="flex h-full flex-col p-4 space-y-4">
-          <AgentStats />
-          <OperationsList />
+      <div className="w-96 border-r border-gray-800 bg-gray-950/50">
+        <div className="flex h-full flex-col">
+          <div className="p-4">
+            <AgentStats />
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <OperationsList />
+          </div>
         </div>
       </div>
 

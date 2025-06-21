@@ -36,7 +36,8 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js')
     },
     frame: false,
-    transparent: true,
+    transparent: false,
+    backgroundColor: '#111827',
     resizable: true,
     alwaysOnTop: true,
     skipTaskbar: true,
@@ -72,8 +73,8 @@ function createWindow() {
     const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
     
     // Expanded size for the new dashboard
-    const agentWidth = Math.floor(screenWidth * 0.8);
-    const agentHeight = Math.floor(screenHeight * 0.8);
+    const agentWidth = 1440;
+    const agentHeight = 810;
     
     // Center the window
     const x = Math.floor((screenWidth - agentWidth) / 2);

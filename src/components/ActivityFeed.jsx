@@ -31,7 +31,7 @@ function ActivityFeed() {
   return (
     <div className="flex h-full flex-col">
       {/* Activity Header */}
-      <Card className="border-0 bg-transparent">
+      <Card className="border-0 bg-transparent flex-shrink-0">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-mono text-gray-300">Agent Thought Process</CardTitle>
@@ -56,7 +56,7 @@ function ActivityFeed() {
       </Card>
 
       {/* Agent Thoughts */}
-      <Card className="flex-1 border-0 bg-transparent">
+      <Card className="flex-1 border-0 bg-transparent min-h-0">
         <CardContent className="p-0 h-full">
           <ScrollArea className="h-full">
             <div className="px-6 space-y-4">
@@ -87,7 +87,7 @@ function ActivityFeed() {
       </Card>
 
       {/* Bottom Actions */}
-      <Card className="border-0 bg-transparent">
+      <Card className="border-0 bg-transparent flex-shrink-0">
         <CardContent className="p-6 space-y-4">
           <Button className="w-full bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-300 font-mono">
             <Zap className="w-4 h-4 mr-2" />

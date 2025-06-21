@@ -3,6 +3,8 @@ import AgentDashboard from './components/AgentDashboard';
 import CompactView from './components/CompactView';
 import TitleBar from './components/TitleBar';
 
+
+
 function App() {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -27,7 +29,7 @@ function App() {
   }
 
   return (
-    <div className="bg-gray-900 text-white min-h-screen flex flex-col">
+    <div className="bg-gray-900 text-white min-h-screen flex flex-col" style={{ height: '100vh' }}>
       <TitleBar onCollapse={handleCollapse} />
       <div className="flex flex-grow">
         <AgentDashboard />
