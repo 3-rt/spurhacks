@@ -296,6 +296,9 @@ async function main({
         // Execute the enhanced query with the agent - this will generate real Stagehand logs
         emitStagehandOutput('execution_start', '🚀 Beginning task execution...', 'info');
         
+        // make it go to duckduckgo.com as default
+        await page.goto("https://duckduckgo.com");
+
         const result = await agent.execute(enhancedQuery);
         
         // Emit completion COT event
