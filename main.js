@@ -83,8 +83,7 @@ function createWindow() {
     backgroundColor: '#111827',
     resizable: true,
     movable: true,
-    alwaysOnTop: true,
-    skipTaskbar: true,
+    alwaysOnTop: true, // Start collapsed, so keep on top
     show: false,
   })
 
@@ -114,6 +113,9 @@ function createWindow() {
         width: screenWidth,
         height: screenHeight
       })
+      
+      // Set alwaysOnTop to false when maximized (expanded state)
+      mainWindow.setAlwaysOnTop(false)
     }
   })
 
@@ -127,15 +129,9 @@ function createWindow() {
     const currentDisplay = getCurrentDisplay()
     const { width: screenWidth, height: screenHeight } = currentDisplay.workAreaSize
     
-    // Calculate window size based on fixed sidebar widths
-    // Left sidebar: 320px (w-80)
-    // Right sidebar: 384px (w-96)
-    // Main content: minimum 600px for browser
-    const leftSidebarWidth = 320
-    const rightSidebarWidth = 384
-    const mainContentWidth = Math.max(600, screenWidth * 0.4) // Minimum 600px for browser
-    
-    const windowWidth = Math.min(leftSidebarWidth + mainContentWidth + rightSidebarWidth, screenWidth * 0.95)
+    // Calculate responsive window size that spans full width
+    // Use most of the screen width for better responsive behavior
+    const windowWidth = Math.min(screenWidth * 0.95, 1400) // Cap at 1400px for very large screens
     const windowHeight = Math.min(700, screenHeight * 0.85)  // Cap at 700px or 85% of screen height
     
     // Center the window horizontally and vertically on the current monitor
@@ -148,6 +144,9 @@ function createWindow() {
       width: windowWidth,
       height: windowHeight
     })
+    
+    // Set alwaysOnTop to false when expanded
+    mainWindow.setAlwaysOnTop(false)
     
     // Ensure the window is not maximized to maintain our custom bounds
     if (mainWindow.isMaximized()) {
@@ -176,6 +175,9 @@ function createWindow() {
       width: 80,
       height: 80
     })
+    
+    // Set alwaysOnTop to true when collapsed
+    mainWindow.setAlwaysOnTop(true)
   })
 
   // Handle window dragging

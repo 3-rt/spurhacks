@@ -1430,6 +1430,10 @@ body {
   padding-right: 0;
 }
 
+.pr-6 {
+  padding-right: 1.5rem;
+}
+
 .pt-4 {
   padding-top: 1rem;
 }
