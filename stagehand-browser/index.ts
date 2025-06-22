@@ -112,25 +112,16 @@ async function createCOTAgent(stagehand: Stagehand, memoryContext: string = "", 
     MEMORY CONTEXT:${memoryContext}
     ${personalInfoContext}
     IMPORTANT INSTRUCTIONS:
-    1. Use the memory context to understand what the user is referring to when they mention "same", "yesterday", "last week", "previous", or similar references
-    2. If the memory shows specific details (names, symbols, locations, etc.), use those specific details in your search
-    3. Always prioritize specific information from memory over generic searches
-    4. If the user says "same" and memory shows specific details, use those details to make the search more specific
-    5. If the user says "yesterday" or "last week", look at the memory context for what was done then
-    6. Use the enhanced query if it's different from the original, otherwise use the original query but apply the memory context
-    7. Use personal information when relevant to personalize responses or fill in forms
-    8. When navigating websites, use scrolling to explore content thoroughly:
-       - Scroll down to see more content, load lazy-loaded elements, or find specific information
-       - Scroll up to return to previous content or navigation elements
-       - Use smooth scrolling when appropriate for better user experience
-       - Scroll to specific sections when looking for particular information
-    9. Use common web navigation actions:
-       - Click buttons, links, and interactive elements
-       - Fill out forms with appropriate information
-       - Use search functionality when available
-       - Navigate through pagination if present
-       - Wait for dynamic content to load
-       - Handle popups, modals, and overlays appropriately
+    1.  Always consult the MEMORY CONTEXT to understand the user's intent, especially if the query is short, ambiguous, or seems to refer to past activities. The memory provides valuable context about previous tasks.
+    2.  When memory provides specific details (like names, companies, locations, URLs), prioritize using those details to make your actions more precise. For example, use a specific company name from memory instead of a generic search.
+    3.  When the MEMORY CONTEXT is relevant, always use the PERSONAL INFO CONTEXT as well, especially for tasks involving personal details or preferences.
+    4.  Use the ENHANCED QUERY if it provides a clearer goal. Otherwise, use the ORIGINAL QUERY but enrich it with insights from the memory and personal info contexts.
+    5.  When navigating websites, be thorough. Use scrolling (up and down) to explore all content, find information, and reveal lazy-loaded elements.
+    6.  When dealing with forms:
+        - Identify and fill in ALL required fields.
+        - Use information from the PERSONAL INFO CONTEXT to complete the form accurately.
+        - After filling all necessary fields, locate and click the 'submit', 'continue', 'next', or similarly-named button to complete the submission.
+    7.  Use common web navigation actions like clicking buttons, links, and interactive elements, using search bars, and handling popups or modals.
     ORIGINAL QUERY: "${process.env.USER_QUERY || ''}"
     ENHANCED QUERY: "${enhancedQuery}"
     IMPORTANT: You must think through your process step by step and explain your reasoning as you go. Use the following format for your thinking:
