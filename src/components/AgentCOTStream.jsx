@@ -472,7 +472,7 @@ const AgentCOTStream = () => {
                 onKeyPress={handleKeyPress}
               />
               <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
-                {isExecuting && (
+              {isExecuting && (
                   <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
                 )}
                 <Button
@@ -489,7 +489,7 @@ const AgentCOTStream = () => {
                 >
                   {isRecording ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
                 </Button>
-              </div>
+                </div>
             </div>
             {(isRecording || isTranscribing || recordingStatus) && (
               <div className="text-xs text-gray-400 font-mono text-center">
