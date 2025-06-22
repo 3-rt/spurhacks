@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AgentStats from './AgentStats';
 import OperationsList from './OperationsList';
 import BrowserWindow from './BrowserWindow';
@@ -7,6 +7,24 @@ import AgentCOTStream from './AgentCOTStream';
 function AgentDashboard() {
   const [selectedAgent] = useState("agent 01");
   const [browserUrl] = useState("https://ui.shadcn.com/charts");
+  const [debugUrl, setDebugUrl] = useState(null);
+
+  useEffect(() => {
+    // Listen for BrowserBase debug URL from stagehand output
+    if (window.electronAPI) {
+      const handleStream = (data) => {
+        if (data.type === "stagehand-output" && data.data.type === "debug_url") {
+          setDebugUrl(data.data.content.replace('Debug URL: ', ''));
+        }
+      };
+
+      window.electronAPI.onStagehandStream(handleStream);
+      
+      return () => {
+        window.electronAPI.removeAllListeners('stagehand-stream');
+      };
+    }
+  }, []);
 
   return (
     <div className="flex h-full bg-black text-gray-300">
@@ -30,12 +48,15 @@ function AgentDashboard() {
           <div className="text-sm text-gray-400 flex items-center gap-2 font-mono">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             Currently Viewing — {selectedAgent}
+            {debugUrl && (
+              <span className="text-blue-400"> • BrowserBase Active</span>
+            )}
           </div>
         </div>
 
         {/* Browser Window */}
         <div className="flex-1 p-6">
-          <BrowserWindow url={browserUrl} />
+          <BrowserWindow url={debugUrl || browserUrl} />
         </div>
       </div>
 

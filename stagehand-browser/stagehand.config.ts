@@ -17,18 +17,7 @@ const StagehandConfig: ConstructorParams = {
     env: "BROWSERBASE" /* Environment to run in: LOCAL or BROWSERBASE */,
     apiKey: process.env.BROWSERBASE_API_KEY /* API key for authentication */,
     projectId: process.env.BROWSERBASE_PROJECT_ID /* Project identifier */,
-    browserbaseSessionID:
-        undefined /* Session ID for resuming Browserbase sessions */,
-    browserbaseSessionCreateParams: {
-        projectId: process.env.BROWSERBASE_PROJECT_ID!,
-        browserSettings: {
-            blockAds: true,
-            viewport: {
-                width: 1024,
-                height: 768,
-            },
-        },
-    },
+    
     localBrowserLaunchOptions: {
         viewport: {
             width: 1024,
