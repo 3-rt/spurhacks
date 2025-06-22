@@ -1,6 +1,6 @@
 # AI Agent with Stagehand Integration and Audio Recording
 
-A desktop AI agent built with Electron that includes Stagehand web automation, microphone recording, and speech-to-text transcription using Groq Cloud.
+A desktop AI agent built with Electron that includes Stagehand web automation, microphone recording, and speech-to-text transcription using Groq Cloud, and intelligent personal profile management.
 
 ## Features
 
@@ -10,7 +10,75 @@ A desktop AI agent built with Electron that includes Stagehand web automation, m
 - **Audio Recording**: Record audio from your microphone and save as WAV files
 - **Speech-to-Text**: Automatic transcription of recorded audio using Groq Cloud
 - **Voice Commands**: Use voice input to control the AI agent
+- **Personal Profile System**: Intelligent collection and storage of user personal information
+- **Memory Management**: Persistent memory system for context-aware interactions
 - **Modern UI**: Beautiful, modern interface with smooth animations
+
+## Personal Profile System
+
+### Overview
+
+The AI agent now includes an intelligent personal profile system that automatically extracts and stores user information during interactions. This system enhances the agent's ability to provide personalized responses and remember user preferences.
+
+### How It Works
+
+1. **Automatic Extraction**: When you interact with the agent, it automatically identifies and extracts personal information from your queries
+2. **Intelligent Storage**: Personal data is stored in a separate `personal_profile.json` file for privacy and organization
+3. **Context Integration**: The agent uses your personal information to provide more relevant and personalized responses
+4. **Duplicate Prevention**: The system automatically handles duplicates by overriding existing information with new data
+
+### Types of Information Collected
+
+- **Names**: First name, last name, full name
+- **Contact Information**: Email addresses, phone numbers
+- **Location**: Addresses, cities, countries
+- **Preferences**: Food preferences, music tastes, colors, etc.
+- **Demographics**: Age, birth dates, etc.
+- **Custom Data**: Any other personal information you share
+
+### Example Interactions
+
+```
+User: "My name is John Smith and I live in San Francisco"
+Agent: Extracts → firstName: "John", lastName: "Smith", location: "San Francisco"
+
+User: "I like pizza and my email is john@example.com"
+Agent: Extracts → foodPreference: "pizza", email: "john@example.com"
+
+User: "Order the same food as last time"
+Agent: Uses stored preference → "Order pizza"
+```
+
+### Privacy & Security
+
+- Personal data is stored locally in JSON format
+- No data is sent to external services for profile management
+- You can export, import, or clear your personal profile at any time
+- The system only collects information you explicitly share
+
+### Profile Management
+
+The system provides several methods to manage your personal profile:
+
+```javascript
+// Get all personal information
+const profile = await memoryManager.getPersonalInfo();
+
+// Update specific fields
+await memoryManager.updatePersonalInfoField("firstName", "John");
+
+// Get profile statistics
+const stats = await memoryManager.getPersonalProfileStats();
+
+// Clear all personal data
+await memoryManager.clearPersonalProfile();
+
+// Export profile to file
+await memoryManager.exportPersonalProfile("./backup.json");
+
+// Import profile from file
+await memoryManager.importPersonalProfile("./backup.json");
+```
 
 ## Setup
 
@@ -32,6 +100,20 @@ npm install
 # Start the application
 npm start
 ```
+
+### Testing the Personal Profile System
+
+```bash
+# Test the personal profile functionality
+node test-personal-profile.js
+```
+
+This will run a comprehensive test of the personal profile system, including:
+
+- Profile creation and updates
+- Personal information extraction
+- Context generation
+- Statistics and management functions
 
 ## Voice Control
 
@@ -76,6 +158,7 @@ npm start
 ## Audio Recording & Transcription
 
 ### How to Use
+
 1. Click the microphone button to start recording
 2. Speak into your microphone
 3. Click the microphone button again or the "Stop" button to end recording
@@ -84,17 +167,20 @@ npm start
 6. **Voice Commands**: The transcribed text is placed in the input box for easy execution
 
 ### File Storage
+
 - **Location**: `public/` folder in the project directory
 - **Format**: WAV files for maximum compatibility
 - **Naming**: `recording_YYYY-MM-DDTHH-MM-SS-sssZ.wav`
 
 ### Transcription Features
+
 - **High Accuracy**: Uses Groq's distil-whisper-large-v3-en model
 - **Multiple Languages**: Supports various languages automatically
 - **Real-time Feedback**: Shows transcription progress and results
 - **Easy Editing**: Transcribed text can be edited before execution
 
 ### Permissions
+
 The app will request microphone access when you first try to record. Make sure to grant permission for the recording feature to work.
 
 ## Architecture
@@ -107,7 +193,9 @@ The app will request microphone access when you first try to record. Make sure t
 ## Technical Details
 
 ### Stagehand Integration
+
 The integration works by:
+
 1. User input is captured in the renderer process
 2. IPC message is sent to main process via contextBridge
 3. Main process spawns Stagehand script with user query as environment variable
@@ -115,7 +203,9 @@ The integration works by:
 5. Results are sent back through IPC and displayed in the UI
 
 ### Audio Recording & Transcription
+
 Audio recording and transcription is handled through:
+
 1. Web Audio API for microphone access
 2. IPC communication for file saving
 3. Automatic file management in the public directory
@@ -123,7 +213,9 @@ Audio recording and transcription is handled through:
 5. Automatic input population for voice command execution
 
 ### Groq Integration
+
 The Groq integration provides:
+
 - **High-quality transcription** using the distil-whisper-large-v3-en model
 - **Automatic language detection** for multi-language support
 - **Verbose JSON response** with additional metadata
@@ -132,20 +224,28 @@ The Groq integration provides:
 ## Development
 
 ### Running the App
+
 ```bash
 npm start
 ```
 
 ### Building
+
 ```bash
 npm run build
 ```
 
 ## File Structure
+
 ```
 spurhacks/
-├── public/                    # Audio recordings saved here
+├── public/                    # Audio recordings and data files
+│   ├── memory.json           # Memory system data
+│   └── personal_profile.json # Personal profile data
 ├── stagehand-browser/         # Stagehand automation scripts
+├── memory-manager.js         # Memory and personal profile management
+├── personal-profile-manager.js # Personal profile system
+├── test-personal-profile.js  # Personal profile system tests
 ├── index.html                 # Main interface
 ├── render.js                  # Frontend logic
 ├── main.js                    # Electron main process
@@ -173,6 +273,7 @@ The app automatically loads the GROQ_API_KEY from `stagehand-browser/.env`. To u
 3. Restart the application
 
 Example `.env` file:
+
 ```
 GROQ_API_KEY=gsk_your-api-key-here
 ```

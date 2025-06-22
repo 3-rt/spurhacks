@@ -103,11 +103,12 @@ function interceptStagehandLogs() {
 }
 
 // Enhanced agent with COT logging
-async function createCOTAgent(stagehand: Stagehand,memoryContext: string = "", enhancedQuery: string = "") {
+async function createCOTAgent(stagehand: Stagehand, memoryContext: string = "", enhancedQuery: string = "", personalInfoContext: string = "") {
   const agent = stagehand.agent({
     instructions: `You are a helpful web assistant that can use a browser to complete any task the user requests.
     🧠 MEMORY SYSTEM: You have access to previous actions and information. The memory system finds relevant past actions based on word overlap with your current request.
     MEMORY CONTEXT:${memoryContext}
+    ${personalInfoContext}
     IMPORTANT INSTRUCTIONS:
     1. Use the memory context to understand what the user is referring to when they mention "same", "yesterday", "last week", "previous", or similar references
     2. If the memory shows specific details (names, symbols, locations, etc.), use those specific details in your search
@@ -115,6 +116,7 @@ async function createCOTAgent(stagehand: Stagehand,memoryContext: string = "", e
     4. If the user says "same" and memory shows specific details, use those details to make the search more specific
     5. If the user says "yesterday" or "last week", look at the memory context for what was done then
     6. Use the enhanced query if it's different from the original, otherwise use the original query but apply the memory context
+    7. Use personal information when relevant to personalize responses or fill in forms
     ORIGINAL QUERY: "${process.env.USER_QUERY || ''}"
     ENHANCED QUERY: "${enhancedQuery}"
     IMPORTANT: You must think through your process step by step and explain your reasoning as you go. Use the following format for your thinking:
@@ -189,12 +191,27 @@ async function main({
         const relevantMemories = await memoryManager.searchMemories(userQuery, 3);
         let memoryContext = "";
         let enhancedQuery = userQuery;
+        let personalInfoContext = "";
         
         if (relevantMemories.length > 0) {
             console.log(chalk.cyan(`🧠 Found ${relevantMemories.length} relevant memories with word overlap:`));
             
             // Use the memory-based enhancement
-            enhancedQuery = await memoryManager.enhanceQueryWithMemories(userQuery, relevantMemories);
+            const enhancementResult = await memoryManager.enhanceQueryWithMemories(userQuery, relevantMemories);
+            
+            // Handle the new response format
+            if (typeof enhancementResult === 'string') {
+                // Backward compatibility with old format
+                enhancedQuery = enhancementResult;
+            } else if (enhancementResult && typeof enhancementResult === 'object') {
+                // New format with enhancedQuery and personalInfo
+                enhancedQuery = enhancementResult.enhancedQuery || userQuery;
+                
+                // Log personal information if any was extracted
+                if (enhancementResult.personalInfo && Object.keys(enhancementResult.personalInfo).length > 0) {
+                    console.log(chalk.green(`👤 Personal information extracted:`, enhancementResult.personalInfo));
+                }
+            }
             
             // Create memory context for the agent
             memoryContext = "\n\n🧠 MEMORY CONTEXT - Previous actions that match your request:\n";
@@ -228,12 +245,18 @@ async function main({
             console.log(chalk.yellow("🧠 No relevant memories found for this query"));
         }
         
+        // Get personal information context
+        personalInfoContext = await memoryManager.getPersonalInfoContext();
+        if (personalInfoContext) {
+            console.log(chalk.blue(`👤 Personal profile context loaded`));
+        }
+        
         interceptStagehandLogs();
         
         emitStagehandOutput('task_start', `🎬 Starting AI automation for: "${userQuery}"`, 'info');
         
         // Create a single web agent that can handle any task with enhanced COT instructions and memory context
-        const agent = await createCOTAgent(stagehand, memoryContext, enhancedQuery);
+        const agent = await createCOTAgent(stagehand, memoryContext, enhancedQuery, personalInfoContext);
 
         // Emit COT event for agent creation
         emitStagehandOutput("agent_created", "Web automation agent initialized and ready to execute task", "info");

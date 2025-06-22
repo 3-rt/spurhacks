@@ -1,9 +1,11 @@
 const fs = require('fs').promises;
 const path = require('path');
+const PersonalProfileManager = require('./personal-profile-manager.js');
 
 class MemoryManager {
   constructor(memoryFilePath = null) {
     this.memoryFilePath = memoryFilePath || path.join(__dirname, 'public', 'memory.json');
+    this.personalProfileManager = new PersonalProfileManager();
     // Common stop words to ignore in word matching
     this.stopWords = new Set([
       'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
@@ -365,7 +367,10 @@ class MemoryManager {
       }).join('\n');
 
       const prompt = `
-You are a query enhancement system. Given a user query and relevant past memories, create an enhanced query that incorporates specific details from the memories.
+You are a query enhancement and personal information extraction system. Given a user query and relevant past memories, you need to:
+
+1. Create an enhanced query that incorporates specific details from the memories
+2. Extract any personal information mentioned in the query
 
 USER QUERY: "${userQuery}"
 
@@ -380,23 +385,85 @@ INSTRUCTIONS:
 5. Focus on the most recent and relevant memory if multiple exist
 6. Use any details from the memory context to make the query more specific
 
-Examples:
-- "Check the same stock" + memory of NVDA → "Check NVDA stock price"
-- "Order the same food" + memory of Domino's → "Order from Domino's"
-- "Find that restaurant" + memory of Panda Express → "Find Panda Express"
-- "same thing" + memory with specific details → use those specific details
+PERSONAL INFORMATION EXTRACTION:
+Extract any personal information mentioned in the query such as:
+- Names (first name, last name, full name)
+- Email addresses
+- Phone numbers
+- Addresses
+- Birth dates
+- Preferences (food, music, etc.)
+- Any other personal details
 
-ENHANCED QUERY:`;
+OUTPUT FORMAT:
+You must respond with ONLY a valid JSON object in this exact format:
+{
+  "enhancedQuery": "the enhanced query string",
+  "personalInfo": {
+    "datum1": "value1",
+    "datum2": "value2"
+  }
+}
+
+Examples:
+- "My name is John Smith" → {"enhancedQuery": "My name is John Smith", "personalInfo": {"firstName": "John", "lastName": "Smith"}}
+- "Check the same stock" + memory of NVDA → {"enhancedQuery": "Check NVDA stock price", "personalInfo": {}}
+- "I like pizza" → {"enhancedQuery": "I like pizza", "personalInfo": {"foodPreference": "pizza"}}
+
+IMPORTANT: Only include personal information that is explicitly mentioned or can be reasonably inferred. If no personal information is found, use an empty object for personalInfo.
+
+RESPONSE:`;
 
       const result = await model.generateContent(prompt);
-      const enhancedQuery = result.response.text().trim();
+      const responseText = result.response.text().trim();
       
-      console.log(`🤖 Gemini enhanced query: "${enhancedQuery}"`);
-      return enhancedQuery;
+      // Try to parse the JSON response
+      let parsedResponse;
+      try {
+        // Handle markdown-wrapped JSON responses
+        let jsonText = responseText;
+        if (responseText.includes('```json')) {
+          jsonText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        }
+        parsedResponse = JSON.parse(jsonText);
+      } catch (parseError) {
+        console.log('Failed to parse Gemini response as JSON, using fallback:', parseError.message);
+        // Fallback: treat the entire response as enhanced query
+        parsedResponse = {
+          enhancedQuery: responseText,
+          personalInfo: {}
+        };
+      }
+
+      // Validate the response structure
+      if (!parsedResponse.enhancedQuery) {
+        parsedResponse.enhancedQuery = userQuery;
+      }
+      if (!parsedResponse.personalInfo || typeof parsedResponse.personalInfo !== 'object') {
+        parsedResponse.personalInfo = {};
+      }
+
+      console.log(`🤖 Gemini enhanced query: "${parsedResponse.enhancedQuery}"`);
+      console.log(`👤 Extracted personal info:`, parsedResponse.personalInfo);
+
+      // Save personal information to profile if any was found
+      if (Object.keys(parsedResponse.personalInfo).length > 0) {
+        try {
+          await this.personalProfileManager.updateProfile(parsedResponse.personalInfo);
+          console.log(`💾 Personal information saved to profile`);
+        } catch (profileError) {
+          console.error('❌ Error saving personal information:', profileError);
+        }
+      }
+
+      return parsedResponse;
       
     } catch (error) {
       console.log('Gemini enhancement failed, returning original query:', error.message);
-      return userQuery;
+      return {
+        enhancedQuery: userQuery,
+        personalInfo: {}
+      };
     }
   }
 
@@ -545,6 +612,77 @@ ENHANCED QUERY:`;
       return false;
     }
   }
+
+  /**
+   * Get personal information context for agent instructions
+   */
+  async getPersonalInfoContext() {
+    try {
+      const profile = await this.personalProfileManager.getProfile();
+      if (Object.keys(profile).length === 0) {
+        return "";
+      }
+
+      let context = "\n\n👤 PERSONAL PROFILE - Information about the user:\n";
+      for (const [key, value] of Object.entries(profile)) {
+        context += `   ${key}: ${value}\n`;
+      }
+      return context;
+    } catch (error) {
+      console.error('❌ Error getting personal info context:', error);
+      return "";
+    }
+  }
+
+  /**
+   * Get all personal information
+   */
+  async getPersonalInfo() {
+    return await this.personalProfileManager.getAllPersonalInfo();
+  }
+
+  /**
+   * Get personal profile statistics
+   */
+  async getPersonalProfileStats() {
+    return await this.personalProfileManager.getProfileStats();
+  }
+
+  /**
+   * Get a specific piece of personal information
+   */
+  async getPersonalInfoField(field) {
+    return await this.personalProfileManager.getPersonalInfo(field);
+  }
+
+  /**
+   * Update a specific personal information field
+   */
+  async updatePersonalInfoField(field, value) {
+    const update = { [field]: value };
+    return await this.personalProfileManager.updateProfile(update);
+  }
+
+  /**
+   * Clear all personal information
+   */
+  async clearPersonalProfile() {
+    return await this.personalProfileManager.clearProfile();
+  }
+
+  /**
+   * Export personal profile to file
+   */
+  async exportPersonalProfile(exportPath) {
+    return await this.personalProfileManager.exportProfile(exportPath);
+  }
+
+  /**
+   * Import personal profile from file
+   */
+  async importPersonalProfile(importPath) {
+    return await this.personalProfileManager.importProfile(importPath);
+  }
 }
 
-module.exports = MemoryManager; module.exports = MemoryManager; 
+module.exports = MemoryManager; 
