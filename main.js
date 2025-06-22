@@ -97,15 +97,9 @@ function createWindow() {
     const currentDisplay = getCurrentDisplay()
     const { width: screenWidth, height: screenHeight } = currentDisplay.workAreaSize
     
-    // Calculate window size based on fixed sidebar widths
-    // Left sidebar: 320px (w-80)
-    // Right sidebar: 384px (w-96)
-    // Main content: minimum 600px for browser
-    const leftSidebarWidth = 320
-    const rightSidebarWidth = 384
-    const mainContentWidth = Math.max(600, screenWidth * 0.4) // Minimum 600px for browser
-    
-    const windowWidth = Math.min(leftSidebarWidth + mainContentWidth + rightSidebarWidth, screenWidth * 0.95)
+    // Calculate responsive window size that spans full width
+    // Use most of the screen width for better responsive behavior
+    const windowWidth = Math.min(screenWidth * 0.95, 1400) // Cap at 1400px for very large screens
     const windowHeight = Math.min(700, screenHeight * 0.85)  // Cap at 700px or 85% of screen height
     
     // Center the window horizontally and vertically on the current monitor

@@ -27,9 +27,9 @@ function AgentDashboard() {
   }, []);
 
   return (
-    <div className="flex h-full bg-black text-gray-300 overflow-hidden">
-      {/* Left Sidebar - Fixed width with proper constraints */}
-      <div className="w-80 min-w-80 max-w-80 border-r border-gray-800 bg-gray-950/30 backdrop-blur-sm flex-shrink-0">
+    <div className="flex h-full w-full bg-black text-gray-300 overflow-hidden">
+      {/* Left Sidebar - Responsive width */}
+      <div className="w-80 min-w-64 max-w-96 border-r border-gray-800 bg-gray-950/30 backdrop-blur-sm flex-shrink-0">
         <div className="flex h-full flex-col overflow-hidden">
           <div className="p-6 flex-shrink-0">
             <AgentStats />
@@ -40,7 +40,7 @@ function AgentDashboard() {
         </div>
       </div>
 
-      {/* Main Content Area */}
+      {/* Main Content Area - Flexible width */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
         <div className="h-16 border-b border-gray-800 bg-gray-950/30 backdrop-blur-sm flex items-center justify-between px-8 flex-shrink-0">
@@ -60,9 +60,9 @@ function AgentDashboard() {
         </div>
       </div>
 
-      {/* Right Sidebar - Fixed width with proper constraints */}
-      <div className="w-96 min-w-96 max-w-96 border-l border-gray-800 bg-gray-950/30 backdrop-blur-sm flex-shrink-0">
-        <div className="h-full overflow-hidden">
+      {/* Right Sidebar - Responsive width, always flush to right */}
+      <div className="w-96 min-w-80 max-w-[30%] border-l border-gray-800 bg-gray-950/30 backdrop-blur-sm flex-shrink-0">
+        <div className="h-full w-full overflow-hidden">
           <AgentCOTStream />
         </div>
       </div>

@@ -310,7 +310,7 @@ const AgentCOTStream = () => {
     <div className="flex h-full flex-col bg-[#121212] overflow-hidden">
       {/* Header */}
       <Card className="border-0 bg-transparent flex-shrink-0">
-        <CardHeader className="pb-4 pl-6 pr-0">
+        <CardHeader className="pb-4 pl-6 pr-6">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-mono text-gray-300">Agent Chain of Thought</CardTitle>
             <div className="flex gap-2">
@@ -352,7 +352,7 @@ const AgentCOTStream = () => {
       </Card>
 
       {/* Input Section */}
-      <div className="pl-4 pr-0 pt-4 pb-4 border-b border-gray-800 space-y-3 flex-shrink-0">
+      <div className="pl-4 pr-6 pt-4 pb-4 border-b border-gray-800 space-y-3 flex-shrink-0">
         <div className="relative">
           <Input
             placeholder="find me a yt vid on cows"
@@ -390,7 +390,7 @@ const AgentCOTStream = () => {
         <Card className="h-full border-0 bg-transparent">
           <CardContent className="p-0 h-full">
             <ScrollArea className="h-full w-full" ref={scrollAreaRef}>
-              <div className="pl-6 pr-0 py-4 space-y-3">
+              <div className="pl-6 pr-6 py-4 space-y-3">
                 {cotEvents.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500">
                     <Brain className="w-12 h-12 mx-auto mb-4 text-gray-600" />
