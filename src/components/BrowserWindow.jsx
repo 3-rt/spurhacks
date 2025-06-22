@@ -12,16 +12,25 @@ function BrowserWindow({ url = "https://ui.shadcn.com/charts" }) {
     // Listen for BrowserBase debug URL from stagehand output
     if (window.electronAPI) {
       const handleStream = (data) => {
+        console.log("BrowserWindow: Received event:", data);
+        
         if (data.type === "stagehand-output" && data.data.type === "debug_url") {
-          setDebugUrl(data.data.content.replace('Debug URL: ', ''));
+          console.log("BrowserWindow: Found debug_url event:", data.data.content);
+          const url = data.data.content.replace('Debug URL: ', '');
+          console.log("BrowserWindow: Setting debug URL:", url);
+          setDebugUrl(url);
         }
       };
 
+      console.log("BrowserWindow: Setting up event listener");
       window.electronAPI.onStagehandStream(handleStream);
       
       return () => {
+        console.log("BrowserWindow: Cleaning up event listener");
         window.electronAPI.removeAllListeners('stagehand-stream');
       };
+    } else {
+      console.log("BrowserWindow: electronAPI not available");
     }
   }, []);
 

@@ -13,16 +13,25 @@ function AgentDashboard() {
     // Listen for BrowserBase debug URL from stagehand output
     if (window.electronAPI) {
       const handleStream = (data) => {
+        console.log("AgentDashboard: Received event:", data);
+        
         if (data.type === "stagehand-output" && data.data.type === "debug_url") {
-          setDebugUrl(data.data.content.replace('Debug URL: ', ''));
+          console.log("AgentDashboard: Found debug_url event:", data.data.content);
+          const url = data.data.content.replace('Debug URL: ', '');
+          console.log("AgentDashboard: Setting debug URL:", url);
+          setDebugUrl(url);
         }
       };
 
+      console.log("AgentDashboard: Setting up event listener");
       window.electronAPI.onStagehandStream(handleStream);
       
       return () => {
+        console.log("AgentDashboard: Cleaning up event listener");
         window.electronAPI.removeAllListeners('stagehand-stream');
       };
+    } else {
+      console.log("AgentDashboard: electronAPI not available");
     }
   }, []);
 

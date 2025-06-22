@@ -240,6 +240,28 @@ function createWindow() {
                 // Try to parse as JSON to detect Stagehand output events
                 const parsed = JSON.parse(line)
                 if (parsed.type === "stagehand-output") {
+                  console.log("DEBUG: Received stagehand-output event:", parsed.data.type);
+                  
+                  // Special handling for debug_url
+                  if (parsed.data.type === "debug_url") {
+                    console.log("DEBUG: Found debug_url event:", parsed.data.content);
+                    console.log("DEBUG: Sending debug_url to frontend...");
+                  }
+                  
+                  // Important system events that should always be sent through (not processed by COT)
+                  const systemEvents = ['debug_url', 'session_created'];
+                  
+                  if (systemEvents.includes(parsed.data.type)) {
+                    // Always send system events directly to frontend without COT processing
+                    console.log("DEBUG: Sending system event to frontend:", parsed.data.type);
+                    mainWindow.webContents.send("stagehand-stream", {
+                      type: "stagehand-output",
+                      data: parsed.data,
+                      isComplete: false
+                    });
+                    return; // Don't process further
+                  }
+                  
                   // Try to enhance the event with COT service
                   if (cotEnhancementService) {
                     const enhancedEvent = cotEnhancementService.addReasoningEvent(parsed.data);
@@ -268,6 +290,7 @@ function createWindow() {
                   }
                   
                   // Send original Stagehand output event to frontend (non-reasoning events only)
+                  console.log("DEBUG: Sending stagehand-stream event to frontend:", parsed.data.type);
                   mainWindow.webContents.send("stagehand-stream", {
                     type: "stagehand-output",
                     data: parsed.data,
@@ -281,6 +304,9 @@ function createWindow() {
               
               // Extract real Stagehand instructions from raw logs for COT enhancement
               if (cotEnhancementService) {
+                // Log ALL lines to understand the actual format
+                console.log("COT Enhancement: ALL LINES:", JSON.stringify(line));
+                
                 const stagehandEvent = parseStagehandInstruction(line);
                 if (stagehandEvent) {
                   console.log("COT Enhancement: Extracted real Stagehand instruction:", stagehandEvent);
@@ -288,49 +314,11 @@ function createWindow() {
                 }
               }
               
-              // Skip raw terminal output if enhancement is enabled and suppression is on
-              if (cotEnhancementService && cotEnhancementService.shouldSuppressRawEvents()) {
-                // Filter out npm script output and other non-important terminal messages
-                const skipPatterns = [
-                  /^>\s*start$/,
-                  /^>\s*tsx\s+index\.ts$/,
-                  /^>\s*npm\s+run/,
-                  /^>\s*webpack/,
-                  /asset\s+bundle\.js/,
-                  /orphan\s+modules/,
-                  /runtime\s+modules/,
-                  /cacheable\s+modules/,
-                  /webpack\s+\d+\.\d+\.\d+\s+compiled/,
-                  /modules\s+by\s+path/,
-                  /\[built\]\s+\[code\s+generated\]/,
-                  /\(Use\s+`.*--trace-warnings/,
-                  /\(node:\d+\)\s+\[.*\]\s+Warning:/,
-                  /Reparsing\s+as\s+ES\s+module/,
-                  /Module\s+type\s+of\s+file:/,
-                  /To\s+eliminate\s+this\s+warning/
-                ];
-                
-                const shouldSkip = skipPatterns.some(pattern => pattern.test(line));
-                if (shouldSkip) {
-                  return; // Skip npm/build output
-                }
-                
-                // Only show raw output if it contains important non-reasoning information
-                const importantKeywords = ['error', 'warning', 'complete', 'failed', 'success'];
-                const hasImportantInfo = importantKeywords.some(keyword => 
-                  line.toLowerCase().includes(keyword)
-                );
-                
-                if (!hasImportantInfo) {
-                  return; // Skip non-important raw output
-                }
-              }
-              
               // Send regular output to frontend
-          mainWindow.webContents.send("stagehand-stream", {
-            type: "output",
+              mainWindow.webContents.send("stagehand-stream", {
+                type: "output",
                 data: line + '\n',
-            isComplete: false
+                isComplete: false
               })
             }
           })
@@ -598,48 +586,13 @@ function createWindow() {
 
               // Extract real Stagehand instructions from raw logs for COT enhancement
               if (cotEnhancementService) {
+                // Log ALL lines to understand the actual format
+                console.log("COT Enhancement: ALL LINES:", JSON.stringify(line));
+                
                 const stagehandEvent = parseStagehandInstruction(line);
                 if (stagehandEvent) {
                   console.log("COT Enhancement: Extracted real Stagehand instruction:", stagehandEvent);
                   cotEnhancementService.addReasoningEvent(stagehandEvent);
-                }
-              }
-              
-              // Skip raw terminal output if enhancement is enabled and suppression is on
-              if (cotEnhancementService && cotEnhancementService.shouldSuppressRawEvents()) {
-                // Filter out npm script output and other non-important terminal messages
-                const skipPatterns = [
-                  /^>\s*start$/,
-                  /^>\s*tsx\s+index\.ts$/,
-                  /^>\s*npm\s+run/,
-                  /^>\s*webpack/,
-                  /asset\s+bundle\.js/,
-                  /orphan\s+modules/,
-                  /runtime\s+modules/,
-                  /cacheable\s+modules/,
-                  /webpack\s+\d+\.\d+\.\d+\s+compiled/,
-                  /modules\s+by\s+path/,
-                  /\[built\]\s+\[code\s+generated\]/,
-                  /\(Use\s+`.*--trace-warnings/,
-                  /\(node:\d+\)\s+\[.*\]\s+Warning:/,
-                  /Reparsing\s+as\s+ES\s+module/,
-                  /Module\s+type\s+of\s+file:/,
-                  /To\s+eliminate\s+this\s+warning/
-                ];
-                
-                const shouldSkip = skipPatterns.some(pattern => pattern.test(line));
-                if (shouldSkip) {
-                  return; // Skip npm/build output
-                }
-                
-                // Only show raw output if it contains important non-reasoning information
-                const importantKeywords = ['error', 'warning', 'complete', 'failed', 'success'];
-                const hasImportantInfo = importantKeywords.some(keyword => 
-                  line.toLowerCase().includes(keyword)
-                );
-                
-                if (!hasImportantInfo) {
-                  return; // Skip non-important raw output
                 }
               }
               
@@ -820,62 +773,93 @@ function createWindow() {
 
 // Function to parse real Stagehand instructions from raw terminal output
 function parseStagehandInstruction(line) {
-  // Parse Stagehand observe instructions - updated regex for actual format
-  const observeMatch = line.match(/INFO: running observe[\s\S]*?instruction: "([^"]+)"/);
-  if (observeMatch) {
-    return {
-      type: "stagehand_observe",
-      content: `Observing: ${observeMatch[1]}`,
-      level: "info",
-      timestamp: new Date().toISOString(),
-      instruction: observeMatch[1]
-    };
+  // Log ALL lines to understand the actual format
+  console.log("COT Enhancement: Processing line:", JSON.stringify(line));
+  
+  // Check for any line that might contain Stagehand instruction data
+  if (line.includes('instruction') || line.includes('observe') || line.includes('act') || 
+      line.includes('INFO:') || line.includes('reasoning') || line.includes('parameters') ||
+      line.includes('url') || line.includes('description') || line.includes('method')) {
+    console.log("COT Enhancement: POTENTIAL STAGEHAND LINE:", line);
   }
   
-  // Parse Stagehand act instructions - updated for multiline format
-  if (line.includes('INFO: Performing act from an ObserveResult')) {
-    // Store the line for potential multiline parsing
-    global.stagehandActLine = line;
-    return null; // Will be processed when we get the full observeResult
+  // Look for instruction patterns in various formats
+  
+  // Pattern 1: Direct instruction line
+  if (line.includes('instruction:')) {
+    const instructionMatch = line.match(/instruction:\s*['"]*([^'"]+)['"]/);
+    if (instructionMatch) {
+      console.log("COT Enhancement: Found instruction pattern 1:", instructionMatch[1]);
+      return {
+        type: "stagehand_observe",
+        content: `Real Instruction: ${instructionMatch[1]}`,
+        level: "info",
+        timestamp: new Date().toISOString(),
+        instruction: instructionMatch[1]
+      };
+    }
   }
   
-  // Parse observeResult with description and method
-  const observeResultMatch = line.match(/"description": "([^"]+)"[\s\S]*?"method": "([^"]+)"/);
-  if (observeResultMatch && global.stagehandActLine) {
-    const result = {
-      type: "stagehand_action",
-      content: `Acting: ${observeResultMatch[2]} on ${observeResultMatch[1]}`,
-      level: "info", 
-      timestamp: new Date().toISOString(),
-      action: observeResultMatch[2],
-      target: observeResultMatch[1]
-    };
-    global.stagehandActLine = null; // Clear the stored line
-    return result;
+  // Pattern 2: Parameters field (might contain the actual instruction)
+  if (line.includes('parameters:')) {
+    const paramMatch = line.match(/parameters:\s*['"]*([^'"]+)['"]/);
+    if (paramMatch && paramMatch[1] !== 'null' && paramMatch[1] !== 'undefined') {
+      console.log("COT Enhancement: Found parameters pattern:", paramMatch[1]);
+      return {
+        type: "stagehand_observe", 
+        content: `Real Parameters: ${paramMatch[1]}`,
+        level: "info",
+        timestamp: new Date().toISOString(),
+        instruction: paramMatch[1]
+      };
+    }
   }
   
-  // Parse navigation events - updated regex
-  const navMatch = line.match(/INFO: new page detected with URL[\s\S]*?url: "([^"]+)"/);
-  if (navMatch) {
-    return {
-      type: "stagehand_navigation",
-      content: `Navigated to: ${navMatch[1]}`,
-      level: "info",
-      timestamp: new Date().toISOString(),
-      url: navMatch[1]
-    };
+  // Pattern 3: Reasoning field (might contain the actual instruction)
+  if (line.includes('reasoning:')) {
+    const reasoningMatch = line.match(/reasoning:\s*['"]*([^'"]+)['"]/);
+    if (reasoningMatch) {
+      console.log("COT Enhancement: Found reasoning pattern:", reasoningMatch[1]);
+      return {
+        type: "stagehand_action",
+        content: `Real Reasoning: ${reasoningMatch[1]}`,
+        level: "info", 
+        timestamp: new Date().toISOString(),
+        reasoning: reasoningMatch[1]
+      };
+    }
   }
   
-  // Parse element finding - updated regex
-  const elementMatch = line.match(/INFO: found elements[\s\S]*?"description": "([^"]+)"/);
-  if (elementMatch) {
-    return {
-      type: "stagehand_discovery",
-      content: `Found element: ${elementMatch[1]}`,
-      level: "info",
-      timestamp: new Date().toISOString(),
-      element: elementMatch[1]
-    };
+  // Pattern 4: URL detection
+  if (line.includes('url:')) {
+    const urlMatch = line.match(/url:\s*['"]*([^'"]+)['"]/);
+    if (urlMatch) {
+      console.log("COT Enhancement: Found URL pattern:", urlMatch[1]);
+      return {
+        type: "stagehand_navigation",
+        content: `Real Navigation: ${urlMatch[1]}`,
+        level: "info",
+        timestamp: new Date().toISOString(),
+        url: urlMatch[1]
+      };
+    }
+  }
+  
+  // Pattern 5: Description and method (action patterns)
+  if (line.includes('"description":') && line.includes('"method":')) {
+    const descMatch = line.match(/"description":\s*"([^"]+)"/);
+    const methodMatch = line.match(/"method":\s*"([^"]+)"/);
+    if (descMatch && methodMatch) {
+      console.log("COT Enhancement: Found action pattern:", methodMatch[1], "on", descMatch[1]);
+      return {
+        type: "stagehand_action",
+        content: `Real Action: ${methodMatch[1]} on "${descMatch[1]}"`,
+        level: "info",
+        timestamp: new Date().toISOString(),
+        action: methodMatch[1],
+        target: descMatch[1]
+      };
+    }
   }
   
   return null;

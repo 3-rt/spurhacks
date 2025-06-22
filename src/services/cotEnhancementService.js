@@ -56,30 +56,11 @@ class COTEnhancementService {
       return null; // Return null if Gemini not available
     }
 
-    // Only buffer certain types of events that contain reasoning or important status updates
+    // Only buffer real Stagehand instruction types - remove generic events to eliminate hallucinations
     const reasoningTypes = [
-      'agent_action', 
-      'agent_llm', 
-      'agent_debug', 
-      'agent_info',
-      'agent_general',
-      'thinking_start',
-      'analyzing_request',
-      'planning_approach',
-      'executing_steps',
-      'execution_start',
-      'execution_success',
-      'execution_complete',
-      'task_start',
-      'task_complete',
-      'observe',
-      'action',
-      'navigation',
-      'screenshot',
-      'extraction',
-      // Real Stagehand instruction types
+      // Real Stagehand instruction types only
       'stagehand_observe',
-      'stagehand_action',
+      'stagehand_action', 
       'stagehand_navigation',
       'stagehand_discovery'
     ];
@@ -142,36 +123,34 @@ class COTEnhancementService {
 
       // Create prompt for Gemini
       const prompt = `
-You are an AI assistant explaining the thought process of a browser automation agent. Convert these raw technical logs into engaging, human-readable chain of thought statements that show the complete journey.
+You are explaining the actions of a Stagehand browser automation agent. Convert these real browser automation logs into clear, human-readable explanations of what the agent is actually doing.
 
-Raw AI reasoning logs:
+Real Stagehand automation logs:
 ${reasoningText}
 
-Create 3-5 detailed, conversational statements that tell the complete story:
-1. What the AI is thinking and planning
-2. What specific actions it's taking and why
-3. How it's adapting and what it discovers
-4. What challenges it encounters and how it solves them
-5. What it accomplishes and learns
+Create 2-4 clear, specific statements that explain exactly what the browser automation agent is doing:
+1. What it's observing or looking for on the page
+2. What specific actions it's taking (clicking, typing, navigating)
+3. What it discovered or found
+4. Where it's navigating to
 
-Make each statement feel like the AI is narrating its journey in real-time. Include:
-- Strategic thinking ("I need to...")
-- Action explanations ("Now I'm going to...")
-- Discoveries ("I can see that...")
-- Problem-solving ("Since that didn't work, I'll try...")
-- Accomplishments ("Great! I successfully...")
+Make each statement factual and specific to the actual browser actions. DO NOT add context or assumptions beyond what's in the logs. Focus on:
+- Real observations ("Looking for the search box on the page")
+- Actual actions ("Typing 'cows' into the search input field")
+- Real discoveries ("Found the search button")
+- Actual navigation ("Navigating to the search results page")
 
 Format as JSON array:
 [
   {
     "type": "enhanced_reasoning",
-    "content": "Engaging explanation of what the AI is thinking/doing",
+    "content": "Clear explanation of the actual browser action being performed",
     "confidence": "high|medium|low",
     "step_number": 1
   }
 ]
 
-Be conversational, detailed, and make the AI's journey feel complete and engaging.
+Stay factual and only describe what the agent is actually doing based on the logs.
 `;
 
       console.log("COT Enhancement: Sending request to Gemini...");

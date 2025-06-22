@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Brain, Play, Square, RotateCcw, Zap, Target, CheckCircle, AlertTriangle, Send, Mic, MicOff } from "lucide-react";
+import { Brain, Play, Square, RotateCcw, Zap, Target, CheckCircle, AlertTriangle, Send, Mic, MicOff, Globe } from "lucide-react";
 import stagehandService from '../services/stagehandService';
 
 const AgentCOTStream = () => {
@@ -435,6 +435,33 @@ const AgentCOTStream = () => {
     }, testEvents.length * 1000 + 1000);
   };
 
+  const testBrowserBase = async () => {
+    if (isExecuting || isStreaming) return;
+    
+    // Set a simple test query and execute it
+    setUserQuery("go to google.com");
+    setIsExecuting(true);
+    setCotEvents([]); // Clear previous events
+    setCurrentStep(0);
+    
+    try {
+      // Execute the task using the Stagehand service
+      const result = await stagehandService.executeTask("go to google.com");
+    } catch (error) {
+      console.error('BrowserBase test error:', error);
+      const errorEvent = {
+        type: "execution_error",
+        content: `BrowserBase test error: ${error.message}`,
+        step: -1,
+        timestamp: new Date().toISOString()
+      };
+      setCotEvents(prev => [errorEvent, ...prev]);
+    } finally {
+      setIsExecuting(false);
+      setIsStreaming(false);
+    }
+  };
+
   const testEnhancedCOT = () => {
     const enhancedEvents = [
       {
@@ -502,6 +529,16 @@ const AgentCOTStream = () => {
                 title="Test regular COT events"
               >
                 <Zap className="w-3 h-3" />
+              </Button>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={testBrowserBase}
+                className="h-7 px-2 hover:bg-gray-800 text-blue-400"
+                disabled={isStreaming || isExecuting}
+                title="Test BrowserBase connection"
+              >
+                <Globe className="w-3 h-3" />
               </Button>
               <Button 
                 size="sm" 
