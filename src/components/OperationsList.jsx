@@ -101,70 +101,6 @@ const CornerBracket = ({ position }) => {
 }
 
 function OperationsList() {
-  const containerStyle = {
-    flex: 1,
-    backgroundColor: "#000000",
-    color: "#d1d5db",
-    padding: "24px",
-    fontFamily: "monospace",
-    overflowY: "auto",
-  }
-
-  const headerStyle = {
-    marginBottom: "32px",
-  }
-
-  const titleStyle = {
-    fontSize: "24px",
-    fontWeight: "bold",
-    color: "#d1d5db",
-    marginBottom: "4px",
-  }
-
-  const countStyle = {
-    color: "#ef4444",
-  }
-
-  const subtitleStyle = {
-    fontSize: "14px",
-    color: "#9ca3af",
-  }
-
-  const missionCardStyle = {
-    backgroundColor: "rgba(17, 24, 39, 0.3)",
-    border: "1px solid #4b5563",
-    padding: "24px",
-    position: "relative",
-    marginBottom: "24px",
-  }
-
-  const missionCodeStyle = {
-    marginBottom: "12px",
-  }
-
-  const codeTextStyle = {
-    fontSize: "14px",
-    color: "#9ca3af",
-  }
-
-  const codeValueStyle = {
-    color: "#ffffff",
-    fontWeight: "bold",
-  }
-
-  const descriptionStyle = {
-    color: "#d1d5db",
-    fontSize: "16px",
-    marginBottom: "24px",
-    lineHeight: "1.6",
-  }
-
-  const buttonContainerStyle = {
-    display: "flex",
-    alignItems: "center",
-    gap: "16px",
-  }
-
   const handleDetailsClick = (missionId) => {
     console.log("Details clicked for mission:", missionId)
   }
@@ -174,30 +110,30 @@ function OperationsList() {
   }
 
   return (
-    <div style={containerStyle}>
-      <div style={headerStyle}>
-        <h2 style={titleStyle}>
-          Operations List <span style={countStyle}>({missions.length * 5})</span>
+    <div className="flex-1 bg-black text-gray-300 p-6 font-mono overflow-y-auto h-full">
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold text-gray-300 mb-1">
+          Operations List <span className="text-red-500">({missions.length * 5})</span>
         </h2>
-        <p style={subtitleStyle}>4 updates in the previous 24 hours</p>
+        <p className="text-sm text-gray-400">4 updates in the previous 24 hours</p>
       </div>
 
-      <div>
+      <div className="space-y-6">
         {missions.map((mission) => (
-          <div key={mission.id} style={missionCardStyle}>
+          <div key={mission.id} className="bg-gray-900/30 border border-gray-600 p-6 relative">
             <CornerBracket position="topLeft" />
             <CornerBracket position="topRight" />
             <CornerBracket position="bottomLeft" />
             <CornerBracket position="bottomRight" />
 
-            <div style={missionCodeStyle}>
-              <span style={codeTextStyle}>Mission Code: </span>
-              <span style={codeValueStyle}>{mission.code}</span>
+            <div className="mb-3">
+              <span className="text-sm text-gray-400">Mission Code: </span>
+              <span className="text-white font-bold">{mission.code}</span>
             </div>
 
-            <p style={descriptionStyle}>{mission.description}</p>
+            <p className="text-gray-300 text-base mb-6 leading-relaxed">{mission.description}</p>
 
-            <div style={buttonContainerStyle}>
+            <div className="flex items-center gap-4">
               <Button onClick={() => handleDetailsClick(mission.id)}>Details</Button>
               <Button onClick={() => handleJoinClick(mission.id)}>Mission »</Button>
             </div>

@@ -307,10 +307,10 @@ const AgentCOTStream = () => {
   };
 
   return (
-    <div className="flex h-full flex-col bg-[#121212]">
+    <div className="flex h-full flex-col bg-[#121212] overflow-hidden">
       {/* Header */}
       <Card className="border-0 bg-transparent flex-shrink-0">
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-4 pl-6 pr-0">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-mono text-gray-300">Agent Chain of Thought</CardTitle>
             <div className="flex gap-2">
@@ -352,7 +352,7 @@ const AgentCOTStream = () => {
       </Card>
 
       {/* Input Section */}
-      <div className="p-4 border-b border-gray-800 space-y-3">
+      <div className="pl-4 pr-0 pt-4 pb-4 border-b border-gray-800 space-y-3 flex-shrink-0">
         <div className="relative">
           <Input
             placeholder="find me a yt vid on cows"
@@ -361,7 +361,7 @@ const AgentCOTStream = () => {
             className={`h-12 bg-gray-900 border-gray-700 text-gray-300 placeholder:text-gray-500 font-mono pr-14 ${
               isExecuting ? 'opacity-50 cursor-not-allowed' : ''
             }`}
-            disabled={isExecuting}
+            // disabled={isExecuting}
             onKeyPress={handleKeyPress}
           />
           <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center">
@@ -385,48 +385,50 @@ const AgentCOTStream = () => {
         )}
       </div>
 
-      {/* COT Events Stream */}
-      <Card className={`flex-1 border-0 bg-transparent min-h-0 ${isStreaming ? 'cot-streaming' : ''}`}>
-        <CardContent className="p-0 h-full">
-          <ScrollArea className="h-full" ref={scrollAreaRef}>
-            <div className="px-6 space-y-3 h-full">
-              {cotEvents.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
-                  <Brain className="w-12 h-12 mx-auto mb-4 text-gray-600" />
-                  <p className="text-sm font-mono">Waiting for agent thoughts...</p>
-                  <p className="text-xs text-gray-600 mt-2">Enter a task below to see real-time reasoning</p>
-                </div>
-              ) : (
-                cotEvents.map((event, index) => (
-                  <div 
-                    key={index} 
-                    className={`border rounded-lg p-3 transition-all duration-300 cot-event ${getStepColor(event.type, event.content)}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 mt-1">
-                        {getStepIcon(event.type)}
-                      </div>
-                      <div className="flex-1 min-w-0 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500 font-mono">
-                            {formatTimestamp(event.timestamp)}
-                          </span>
-                           <span className="text-xs text-gray-400 font-mono capitalize">
-                            {event.type.replace(/_/g, ' ')}
-                          </span>
+      {/* COT Events Stream - Scrollable Area */}
+      <div className="flex-1 overflow-hidden min-h-0">
+        <Card className="h-full border-0 bg-transparent">
+          <CardContent className="p-0 h-full">
+            <ScrollArea className="h-full w-full" ref={scrollAreaRef}>
+              <div className="pl-6 pr-0 py-4 space-y-3">
+                {cotEvents.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500">
+                    <Brain className="w-12 h-12 mx-auto mb-4 text-gray-600" />
+                    <p className="text-sm font-mono">Waiting for agent thoughts...</p>
+                    <p className="text-xs text-gray-600 mt-2">Enter a task below to see real-time reasoning</p>
+                  </div>
+                ) : (
+                  cotEvents.map((event, index) => (
+                    <div 
+                      key={index} 
+                      className={`border rounded-lg p-3 transition-all duration-300 cot-event ${getStepColor(event.type, event.content)}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 mt-1">
+                          {getStepIcon(event.type)}
                         </div>
-                        <pre className="text-sm leading-relaxed text-gray-300 font-mono whitespace-pre-wrap">
-                          {event.content}
-                        </pre>
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 font-mono">
+                              {formatTimestamp(event.timestamp)}
+                            </span>
+                             <span className="text-xs text-gray-400 font-mono capitalize">
+                              {event.type.replace(/_/g, ' ')}
+                            </span>
+                          </div>
+                          <pre className="text-sm leading-relaxed text-gray-300 font-mono whitespace-pre-wrap break-words">
+                            {event.content}
+                          </pre>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

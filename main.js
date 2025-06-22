@@ -27,6 +27,17 @@ function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay()
   const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
   
+  // Helper function to get the current display where the window is located
+  const getCurrentDisplay = () => {
+    try {
+      const bounds = mainWindow.getBounds()
+      return screen.getDisplayNearestPoint(bounds)
+    } catch (error) {
+      console.warn('Error getting current display, falling back to primary display:', error)
+      return primaryDisplay
+    }
+  }
+  
   mainWindow = new BrowserWindow({
     width: 80,
     height: 80,
@@ -41,6 +52,7 @@ function createWindow() {
     transparent: false,
     backgroundColor: '#111827',
     resizable: true,
+    movable: true,
     alwaysOnTop: true,
     skipTaskbar: true,
     show: false,
@@ -61,13 +73,14 @@ function createWindow() {
     if (mainWindow.isMaximized()) {
       mainWindow.unmaximize()
     } else {
-      // Use work area size to avoid taskbar overlap
-      const primaryDisplay = screen.getPrimaryDisplay()
-      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
+      // Get the current display where the window is located
+      const currentDisplay = getCurrentDisplay()
+      const { width: screenWidth, height: screenHeight } = currentDisplay.workAreaSize
       
+      // Maximize to the current monitor's work area
       mainWindow.setBounds({
-        x: 0,
-        y: 0,
+        x: currentDisplay.bounds.x,
+        y: currentDisplay.bounds.y,
         width: screenWidth,
         height: screenHeight
       })
@@ -80,16 +93,24 @@ function createWindow() {
 
   // Handle window expansion to fixed size on the right
   ipcMain.handle("expand-window", () => {
-    const primaryDisplay = screen.getPrimaryDisplay()
-    const { height: screenHeight } = primaryDisplay.workAreaSize
+    // Get the current display where the window is located
+    const currentDisplay = getCurrentDisplay()
+    const { width: screenWidth, height: screenHeight } = currentDisplay.workAreaSize
     
-    // Use fixed dimensions based on content size
-    const windowWidth = 876  // 80px left sidebar + 700px browser window + 96px right sidebar
-    const windowHeight = Math.min(700, screenHeight * 0.8)  // Cap at 700px or 80% of screen height
+    // Calculate window size based on fixed sidebar widths
+    // Left sidebar: 320px (w-80)
+    // Right sidebar: 384px (w-96)
+    // Main content: minimum 600px for browser
+    const leftSidebarWidth = 320
+    const rightSidebarWidth = 384
+    const mainContentWidth = Math.max(600, screenWidth * 0.4) // Minimum 600px for browser
     
-    // Center the window horizontally and vertically
-    const x = Math.floor((primaryDisplay.workAreaSize.width - windowWidth) / 2)
-    const y = Math.floor((screenHeight - windowHeight) / 2)
+    const windowWidth = Math.min(leftSidebarWidth + mainContentWidth + rightSidebarWidth, screenWidth * 0.95)
+    const windowHeight = Math.min(700, screenHeight * 0.85)  // Cap at 700px or 85% of screen height
+    
+    // Center the window horizontally and vertically on the current monitor
+    const x = currentDisplay.bounds.x + Math.floor((screenWidth - windowWidth) / 2)
+    const y = currentDisplay.bounds.y + Math.floor((screenHeight - windowHeight) / 2)
     
     mainWindow.setBounds({
       x: x,
@@ -115,12 +136,13 @@ function createWindow() {
 
   // Handle window collapse
   ipcMain.handle("collapse-window", () => {
-    const primaryDisplay = screen.getPrimaryDisplay()
-    const { width: screenWidth } = primaryDisplay.workAreaSize
+    // Get the current display where the window is located
+    const currentDisplay = getCurrentDisplay()
+    const { width: screenWidth } = currentDisplay.workAreaSize
     
     mainWindow.setBounds({
-      x: screenWidth - 100,
-      y: 20,
+      x: currentDisplay.bounds.x + screenWidth - 100,
+      y: currentDisplay.bounds.y + 20,
       width: 80,
       height: 80
     })

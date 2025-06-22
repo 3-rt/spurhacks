@@ -44,8 +44,8 @@ function BrowserWindow({ url = "https://ui.shadcn.com/charts" }) {
   };
 
   return (
-    <div className="absolute top-4 right-4">
-      <Card className="w-[700px] h-[500px] border border-gray-800 bg-black overflow-hidden flex flex-col rounded-xl">
+    <div className="w-full h-full">
+      <Card className="w-full h-full border border-gray-800 bg-black overflow-hidden flex flex-col rounded-xl">
         {/* Browser Content */}
         <CardContent className="flex-grow bg-black p-0">
           {debugUrl ? (
