@@ -449,17 +449,14 @@ const AgentCOTStream = () => {
     ];
 
     setIsStreaming(true);
-    testEvents.forEach((event, index) => {
-      setTimeout(() => {
-        setCotEvents(prev => [event, ...prev]);
-        setCurrentStep(event.step);
-        scrollToTop();
-      }, index * 1000);
+    // Add all test events immediately without artificial delays
+    testEvents.forEach((event) => {
+      setCotEvents(prev => [event, ...prev]);
+      setCurrentStep(event.step);
+      scrollToTop();
     });
 
-    setTimeout(() => {
-      setIsStreaming(false);
-    }, testEvents.length * 1000 + 1000);
+    setIsStreaming(false);
   };
 
   const testBrowserBase = async () => {

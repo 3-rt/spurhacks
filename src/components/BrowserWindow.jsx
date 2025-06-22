@@ -43,13 +43,11 @@ function BrowserWindow({ url = "https://ui.shadcn.com/charts" }) {
   const refreshBrowser = () => {
     setIsLoading(true);
     // This is a mock refresh, in a real scenario you might reload the iframe
-    setTimeout(() => {
-      const iframe = document.querySelector('iframe');
-      if (iframe) {
-        iframe.src = iframe.src;
-      }
-      setIsLoading(false)
-    }, 1000);
+    const iframe = document.querySelector('iframe');
+    if (iframe) {
+      iframe.src = iframe.src;
+    }
+    setIsLoading(false);
   };
 
   return (

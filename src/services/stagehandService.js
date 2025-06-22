@@ -96,10 +96,9 @@ class StagehandService {
       }
     ];
 
-    // Simulate each step with delays
+    // Process all steps immediately without artificial delays
     for (const step of steps) {
       this.currentTask.activities.push(step);
-      await new Promise(resolve => setTimeout(resolve, 1500));
     }
 
     this.currentTask.status = 'completed';
