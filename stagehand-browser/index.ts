@@ -1,4 +1,5 @@
 import { Stagehand, Page, BrowserContext } from "@browserbasehq/stagehand";
+import { Browserbase } from "@browserbasehq/sdk";
 import StagehandConfig from "./stagehand.config.js";
 import chalk from "chalk";
 import boxen from "boxen";
@@ -179,6 +180,25 @@ async function createCOTAgent(stagehand: Stagehand, memoryContext: string = "", 
   };
 
   return agent;
+}
+
+/**
+ * Start a BrowserBase session with debug interface
+ */
+async function startBBSSession() {
+  const browserbase = new Browserbase();
+  const session = await browserbase.sessions.create({
+    projectId: process.env.BROWSERBASE_PROJECT_ID!,
+  });
+  const debugUrl = await browserbase.sessions.debug(session.id);
+  
+  emitStagehandOutput('session_created', `BrowserBase session created: ${session.id}`, 'info');
+  emitStagehandOutput('debug_url', `Debug URL: ${debugUrl.debuggerFullscreenUrl}`, 'info');
+  
+  return {
+    sessionId: session.id,
+    debugUrl: debugUrl.debuggerFullscreenUrl,
+  };
 }
 
 async function main({
@@ -365,14 +385,12 @@ async function main({
 }
 
 /**
- * This is the main function that runs when you do npm run start
- *
- * YOU PROBABLY DON'T NEED TO MODIFY ANYTHING BELOW THIS POINT!
- *
+ * Initialize and run the main() function with BrowserBase session
  */
-async function run() {
+async function runStagehand(sessionId?: string) {
     const stagehand = new Stagehand({
         ...StagehandConfig,
+        browserbaseSessionID: sessionId,
     });
     await stagehand.init();
 
@@ -388,8 +406,32 @@ async function run() {
     return result;
 }
 
+/**
+ * This is the main function that runs when you do npm run start
+ *
+ * YOU PROBABLY DON'T NEED TO MODIFY ANYTHING BELOW THIS POINT!
+ *
+ */
+async function run() {
+    try {
+        // Start a BrowserBase session with debug interface
+        const { sessionId, debugUrl } = await startBBSSession();
+        
+        // Run Stagehand with the session ID
+        const result = await runStagehand(sessionId);
+        
+        return result;
+    } catch (error) {
+        console.error('Error in run function:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : String(error)
+        };
+    }
+}
+
 // Export for use in Electron
-export { run as runStagehand };
+export { run as runStagehand, startBBSSession };
 
 // Run the app
 run();
