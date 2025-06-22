@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     windowClose: () => ipcRenderer.invoke('window-close'),
     expandWindow: () => ipcRenderer.invoke('expand-window'),
     collapseWindow: () => ipcRenderer.invoke('collapse-window'),
+    toggleFullscreen: () => ipcRenderer.invoke('toggle-fullscreen'),
     setWindowPosition: (x, y) => ipcRenderer.invoke('set-window-position', x, y),
     
     // Audio recording

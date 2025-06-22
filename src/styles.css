@@ -5,6 +5,48 @@ html, body, #root {
   overflow: hidden;
 }
 
+/* Ensure proper fullscreen behavior */
+html.fullscreen, body.fullscreen, #root.fullscreen {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* Electron-specific fullscreen styles */
+:fullscreen {
+  background: #000000;
+}
+
+:-webkit-full-screen {
+  background: #000000;
+}
+
+/* Improved backdrop blur for better visual hierarchy */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.backdrop-blur-md {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.backdrop-blur-lg {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Enhanced shadow for depth */
+.shadow-3xl {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* Smooth transitions for all interactive elements */
+* {
+  transition: all 0.2s ease-in-out;
+}
+
 /* Tailwind CSS utilities with shadcn/ui styling */
 *, *::before, *::after {
   box-sizing: border-box;
