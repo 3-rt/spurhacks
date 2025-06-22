@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Audio recording
     saveAudioFile: (data) => ipcRenderer.invoke('save-audio-file', data),
     transcribeAudio: (filePath) => ipcRenderer.invoke('transcribe-audio', { filePath }),
+    getGoogleApiKey: () => ipcRenderer.invoke('get-google-api-key'),
     
     // Stagehand browser automation
     initializeStagehand: () => ipcRenderer.invoke('initialize-stagehand'),

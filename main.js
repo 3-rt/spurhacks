@@ -6,6 +6,36 @@ const os = require("os")
 const Groq = require("groq-sdk")
 const MemoryManager = require("./memory-manager.js")
 
+// Import COT Enhancement Service (using dynamic import for ES modules)
+let cotEnhancementService = null;
+
+async function initializeCOTService() {
+  try {
+    const { default: service } = await import('./src/services/cotEnhancementService.js');
+    cotEnhancementService = service;
+    
+    // Initialize the service asynchronously
+    await cotEnhancementService.initialize();
+    
+    // Set up the emit function to send enhanced events to frontend
+    cotEnhancementService.setEmitFunction((enhancedEvents) => {
+      enhancedEvents.forEach(event => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send("stagehand-stream", {
+            type: "enhanced-cot",
+            data: event,
+            isComplete: false
+          });
+        }
+      });
+    });
+    
+    console.log("COT Enhancement Service initialized");
+  } catch (error) {
+    console.error("Failed to initialize COT Enhancement Service:", error);
+  }
+}
+
 // Load environment variables from .env file
 require('dotenv').config({ path: path.join(__dirname, 'stagehand-browser', '.env') })
 
@@ -208,7 +238,34 @@ function createWindow() {
                 // Try to parse as JSON to detect Stagehand output events
                 const parsed = JSON.parse(line)
                 if (parsed.type === "stagehand-output") {
-                  // Send Stagehand output event to frontend
+                  // Try to enhance the event with COT service
+                  if (cotEnhancementService) {
+                    const enhancedEvent = cotEnhancementService.addReasoningEvent(parsed.data);
+                    // If enhancement service processes it, don't send original
+                    if (enhancedEvent === null) {
+                      return; // Event is being processed for enhancement, suppress original
+                    }
+                  }
+                  
+                  // Only send original Stagehand output event if enhancement is disabled
+                  // or if it's not a reasoning event type
+                  const reasoningTypes = [
+                    'agent_action', 
+                    'agent_llm', 
+                    'agent_debug', 
+                    'agent_info',
+                    'thinking_start',
+                    'analyzing_request',
+                    'planning_approach',
+                    'executing_steps'
+                  ];
+                  
+                  // Skip raw reasoning events when enhancement is enabled
+                  if (cotEnhancementService && reasoningTypes.includes(parsed.data.type)) {
+                    return; // Don't send raw reasoning events
+                  }
+                  
+                  // Send original Stagehand output event to frontend (non-reasoning events only)
                   mainWindow.webContents.send("stagehand-stream", {
                     type: "stagehand-output",
                     data: parsed.data,
@@ -220,11 +277,58 @@ function createWindow() {
                 // Not JSON, treat as regular output
               }
               
+              // Extract real Stagehand instructions from raw logs for COT enhancement
+              if (cotEnhancementService) {
+                const stagehandEvent = parseStagehandInstruction(line);
+                if (stagehandEvent) {
+                  console.log("COT Enhancement: Extracted real Stagehand instruction:", stagehandEvent);
+                  cotEnhancementService.addReasoningEvent(stagehandEvent);
+                }
+              }
+              
+              // Skip raw terminal output if enhancement is enabled and suppression is on
+              if (cotEnhancementService && cotEnhancementService.shouldSuppressRawEvents()) {
+                // Filter out npm script output and other non-important terminal messages
+                const skipPatterns = [
+                  /^>\s*start$/,
+                  /^>\s*tsx\s+index\.ts$/,
+                  /^>\s*npm\s+run/,
+                  /^>\s*webpack/,
+                  /asset\s+bundle\.js/,
+                  /orphan\s+modules/,
+                  /runtime\s+modules/,
+                  /cacheable\s+modules/,
+                  /webpack\s+\d+\.\d+\.\d+\s+compiled/,
+                  /modules\s+by\s+path/,
+                  /\[built\]\s+\[code\s+generated\]/,
+                  /\(Use\s+`.*--trace-warnings/,
+                  /\(node:\d+\)\s+\[.*\]\s+Warning:/,
+                  /Reparsing\s+as\s+ES\s+module/,
+                  /Module\s+type\s+of\s+file:/,
+                  /To\s+eliminate\s+this\s+warning/
+                ];
+                
+                const shouldSkip = skipPatterns.some(pattern => pattern.test(line));
+                if (shouldSkip) {
+                  return; // Skip npm/build output
+                }
+                
+                // Only show raw output if it contains important non-reasoning information
+                const importantKeywords = ['error', 'warning', 'complete', 'failed', 'success'];
+                const hasImportantInfo = importantKeywords.some(keyword => 
+                  line.toLowerCase().includes(keyword)
+                );
+                
+                if (!hasImportantInfo) {
+                  return; // Skip non-important raw output
+                }
+              }
+              
               // Send regular output to frontend
-              mainWindow.webContents.send("stagehand-stream", {
-                type: "output",
+          mainWindow.webContents.send("stagehand-stream", {
+            type: "output",
                 data: line + '\n',
-                isComplete: false
+            isComplete: false
               })
             }
           })
@@ -395,6 +499,11 @@ function createWindow() {
     try {
       console.log("Executing Stagehand task with memory context:", userQuery)
 
+      // Clear COT enhancement buffer for new task
+      if (cotEnhancementService) {
+        cotEnhancementService.clearBuffer()
+      }
+
       // Search for relevant memories
       const relevantMemories = await memoryManager.searchMemories(userQuery, 3)
       let memoryContext = ""
@@ -485,6 +594,53 @@ function createWindow() {
                 // Not JSON, treat as regular output
               }
 
+              // Extract real Stagehand instructions from raw logs for COT enhancement
+              if (cotEnhancementService) {
+                const stagehandEvent = parseStagehandInstruction(line);
+                if (stagehandEvent) {
+                  console.log("COT Enhancement: Extracted real Stagehand instruction:", stagehandEvent);
+                  cotEnhancementService.addReasoningEvent(stagehandEvent);
+                }
+              }
+              
+              // Skip raw terminal output if enhancement is enabled and suppression is on
+              if (cotEnhancementService && cotEnhancementService.shouldSuppressRawEvents()) {
+                // Filter out npm script output and other non-important terminal messages
+                const skipPatterns = [
+                  /^>\s*start$/,
+                  /^>\s*tsx\s+index\.ts$/,
+                  /^>\s*npm\s+run/,
+                  /^>\s*webpack/,
+                  /asset\s+bundle\.js/,
+                  /orphan\s+modules/,
+                  /runtime\s+modules/,
+                  /cacheable\s+modules/,
+                  /webpack\s+\d+\.\d+\.\d+\s+compiled/,
+                  /modules\s+by\s+path/,
+                  /\[built\]\s+\[code\s+generated\]/,
+                  /\(Use\s+`.*--trace-warnings/,
+                  /\(node:\d+\)\s+\[.*\]\s+Warning:/,
+                  /Reparsing\s+as\s+ES\s+module/,
+                  /Module\s+type\s+of\s+file:/,
+                  /To\s+eliminate\s+this\s+warning/
+                ];
+                
+                const shouldSkip = skipPatterns.some(pattern => pattern.test(line));
+                if (shouldSkip) {
+                  return; // Skip npm/build output
+                }
+                
+                // Only show raw output if it contains important non-reasoning information
+                const importantKeywords = ['error', 'warning', 'complete', 'failed', 'success'];
+                const hasImportantInfo = importantKeywords.some(keyword => 
+                  line.toLowerCase().includes(keyword)
+                );
+                
+                if (!hasImportantInfo) {
+                  return; // Skip non-important raw output
+                }
+              }
+              
               // Send regular output to frontend
               mainWindow.webContents.send("stagehand-stream", {
                 type: "output",
@@ -653,10 +809,81 @@ function createWindow() {
       }
     }
   })
+
+  // Add IPC handler for getting Google API key
+  ipcMain.handle("get-google-api-key", () => {
+    return process.env.GOOGLE_API_KEY || null;
+  });
 }
 
-app.whenReady().then(() => {
+// Function to parse real Stagehand instructions from raw terminal output
+function parseStagehandInstruction(line) {
+  // Parse Stagehand observe instructions - updated regex for actual format
+  const observeMatch = line.match(/INFO: running observe[\s\S]*?instruction: "([^"]+)"/);
+  if (observeMatch) {
+    return {
+      type: "stagehand_observe",
+      content: `Observing: ${observeMatch[1]}`,
+      level: "info",
+      timestamp: new Date().toISOString(),
+      instruction: observeMatch[1]
+    };
+  }
+  
+  // Parse Stagehand act instructions - updated for multiline format
+  if (line.includes('INFO: Performing act from an ObserveResult')) {
+    // Store the line for potential multiline parsing
+    global.stagehandActLine = line;
+    return null; // Will be processed when we get the full observeResult
+  }
+  
+  // Parse observeResult with description and method
+  const observeResultMatch = line.match(/"description": "([^"]+)"[\s\S]*?"method": "([^"]+)"/);
+  if (observeResultMatch && global.stagehandActLine) {
+    const result = {
+      type: "stagehand_action",
+      content: `Acting: ${observeResultMatch[2]} on ${observeResultMatch[1]}`,
+      level: "info", 
+      timestamp: new Date().toISOString(),
+      action: observeResultMatch[2],
+      target: observeResultMatch[1]
+    };
+    global.stagehandActLine = null; // Clear the stored line
+    return result;
+  }
+  
+  // Parse navigation events - updated regex
+  const navMatch = line.match(/INFO: new page detected with URL[\s\S]*?url: "([^"]+)"/);
+  if (navMatch) {
+    return {
+      type: "stagehand_navigation",
+      content: `Navigated to: ${navMatch[1]}`,
+      level: "info",
+      timestamp: new Date().toISOString(),
+      url: navMatch[1]
+    };
+  }
+  
+  // Parse element finding - updated regex
+  const elementMatch = line.match(/INFO: found elements[\s\S]*?"description": "([^"]+)"/);
+  if (elementMatch) {
+    return {
+      type: "stagehand_discovery",
+      content: `Found element: ${elementMatch[1]}`,
+      level: "info",
+      timestamp: new Date().toISOString(),
+      element: elementMatch[1]
+    };
+  }
+  
+  return null;
+}
+
+app.whenReady().then(async () => {
   createWindow()
+  
+  // Initialize COT Enhancement Service
+  await initializeCOTService()
   
   // Register global keyboard shortcuts
   globalShortcut.register('F11', () => {
