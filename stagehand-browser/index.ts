@@ -117,11 +117,23 @@ async function createCOTAgent(stagehand: Stagehand, memoryContext: string = "", 
     5. If the user says "yesterday" or "last week", look at the memory context for what was done then
     6. Use the enhanced query if it's different from the original, otherwise use the original query but apply the memory context
     7. Use personal information when relevant to personalize responses or fill in forms
+    8. When navigating websites, use scrolling to explore content thoroughly:
+       - Scroll down to see more content, load lazy-loaded elements, or find specific information
+       - Scroll up to return to previous content or navigation elements
+       - Use smooth scrolling when appropriate for better user experience
+       - Scroll to specific sections when looking for particular information
+    9. Use common web navigation actions:
+       - Click buttons, links, and interactive elements
+       - Fill out forms with appropriate information
+       - Use search functionality when available
+       - Navigate through pagination if present
+       - Wait for dynamic content to load
+       - Handle popups, modals, and overlays appropriately
     ORIGINAL QUERY: "${process.env.USER_QUERY || ''}"
     ENHANCED QUERY: "${enhancedQuery}"
     IMPORTANT: You must think through your process step by step and explain your reasoning as you go. Use the following format for your thinking:
     1. First, analyze the user's request and break it down into clear steps
-    @@ -54,7 +81,13 @@ When the user asks to save links, extract and clearly present all relevant URLs.
+    When the user asks to save links, extract and clearly present all relevant URLs.
     Be thorough and complete the entire task from start to finish.
     Do not ask the user for any information, just use the browser to complete the task.
     Always think aloud and explain your reasoning process as you work.
