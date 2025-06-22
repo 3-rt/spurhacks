@@ -20,7 +20,7 @@ function TitleBar({ onCollapse }) {
               className="w-5 h-5 object-contain"
             />
           </div>
-          <span className="text-sm font-semibold text-gray-200">AI Agent</span>
+          <span className="text-sm font-semibold text-gray-200">Hermes</span>
         </div>
         <div className="flex gap-1.5 no-drag-region">
           <button 
