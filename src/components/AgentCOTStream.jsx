@@ -498,49 +498,34 @@ const AgentCOTStream = () => {
 
       {/* Input Section */}
       <div className="pl-4 pr-6 pt-4 pb-4 border-b border-gray-800 space-y-3 flex-shrink-0">
-        <div className="relative">
+        <div className="relative flex items-center">
           <Input
-            placeholder="find me a yt vid on cows"
+            placeholder="¢"
             value={userQuery}
             onChange={(e) => setUserQuery(e.target.value)}
-            className={`h-12 bg-gray-900 border-gray-700 text-gray-300 placeholder:text-gray-500 font-mono pr-20 transition-all duration-200 ${
+            className={`h-12 bg-gray-950/50 border-transparent text-gray-300 placeholder:text-gray-500 font-mono pl-16 pr-6 transition-all duration-200 rounded-full flex-1 ${
               isExecuting 
                 ? 'opacity-50 cursor-not-allowed' 
-                : 'hover:border-gray-600 focus:border-green-500 focus:ring-1 focus:ring-green-500/20'
+                : 'hover:bg-gray-900 focus:ring-2 focus:ring-green-500/50'
             }`}
-            // disabled={isExecuting}
             onKeyPress={handleKeyPress}
           />
-          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
-            {isExecuting && (
-              <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
-            )}
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={toggleRecording}
-              disabled={isExecuting || isTranscribing}
-              className={`h-8 w-8 p-0 rounded-full transition-all duration-300 ${
-                isRecording 
-                  ? 'mic-recording recording-pulse recording-glow' 
-                  : 'hover:bg-gray-700 text-gray-400'
-              }`}
-              title={isRecording ? 'Stop recording' : 'Start voice recording'}
-            >
-              {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-            </Button>
-            <Button
-              size="sm"
-              variant="default"
-              onClick={handleExecuteTask}
-              disabled={isExecuting || !userQuery.trim()}
-              className="h-8 w-10 p-0 rounded-md bg-white hover:bg-gray-200 text-gray-900"
-            >
-              <Square className="w-4 h-4 text-black" />
-            </Button>
-          </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={toggleRecording}
+            disabled={isExecuting || isTranscribing}
+            className={`absolute left-2 h-10 w-10 p-0 rounded-full transition-all duration-300 flex-shrink-0 flex items-center justify-center ${
+              isRecording 
+                ? 'bg-red-500 text-white' 
+                : 'text-gray-400 bg-gray-950/50 hover:bg-gray-800/80 hover:text-white'
+            }`}
+            title={isRecording ? 'Stop recording' : 'Start voice recording'}
+          >
+            {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+          </Button>
         </div>
-
+        
         {(isRecording || isTranscribing || recordingStatus) && (
           <div className="text-xs text-gray-400 font-mono text-center">
             {isRecording && <span className="text-red-400">● Recording</span>}
@@ -560,83 +545,92 @@ const AgentCOTStream = () => {
           </div>
         )}
         
-        {!isExecuting && !isStreaming && cotEvents.length > 0 && (
+        {/* {!isExecuting && !isStreaming && cotEvents.length > 0 && (
           <div className="flex items-center justify-center text-xs text-green-400 font-mono mt-2">
             <CheckCircle className="w-3 h-3 mr-1" />
             <span>Ready for new input</span>
           </div>
-        )}
+        )} */}
       </div>
 
       {/* COT Events Stream - Scrollable Area */}
-      <div className="flex-1 overflow-hidden min-h-0 pt-6">
-        <Card className="h-full border-0 bg-transparent">
-          <CardContent className="p-0 h-full">
-            <ScrollArea className="h-full w-full" ref={scrollAreaRef}>
-              {cotEvents.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center text-gray-500 p-6">
-                  <Brain className="w-12 h-12 mx-auto mb-4 text-gray-600" />
-                  <p className="text-sm font-mono">
-                    {showOnlyEnhanced 
-                      ? "Waiting for enhanced reasoning..." 
-                      : "Waiting for agent thoughts..."
-                    }
-                  </p>
-                  <p className="text-xs text-gray-600 mt-2">
-                    Enter a task below to see real-time reasoning
-                  </p>
-                </div>
-              ) : (
-                <div className="pl-6 pr-6 py-4 space-y-3">
-                  {cotEvents.map((event, index) => (
-                    <div 
-                      key={index} 
-                      className={`border rounded-lg p-3 transition-all duration-300 cot-event ${getStepColor(event.type, event.content)}`}
-                    >
-                      <div className="grid grid-cols-[auto_1fr] gap-3">
-                        <div className="mt-1">
-                          {getStepIcon(event.type)}
-                        </div>
-                        <div className="min-w-0 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500 font-mono">
-                              {formatTimestamp(event.timestamp)}
-                            </span>
-                             <span className="text-xs text-gray-400 font-mono capitalize">
-                              {event.type.replace(/_/g, ' ')}
-                            </span>
-                            {/* {event.enhanced && (
-                              <span className="text-xs bg-cyan-600/20 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-500/30">
-                                Enhanced by Gemini
-                              </span>
-                            )} */}
-                            {/* {event.confidence && (
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${
-                                event.confidence === 'high' ? 'bg-green-600/20 text-green-300 border border-green-500/30' :
-                                event.confidence === 'medium' ? 'bg-yellow-600/20 text-yellow-300 border border-yellow-500/30' :
-                                'bg-red-600/20 text-red-300 border border-red-500/30'
-                              }`}>
-                                {event.confidence}
-                              </span>
-                            )} */}
-                          </div>
-                          <div className="text-sm leading-relaxed text-gray-300 font-mono whitespace-pre-wrap break-words">
-                            {event.content}
-                          </div>
-                          {event.enhanced && event.original_events_count && (
-                            <div className="text-xs text-gray-500 font-mono mt-2 italic">
-                              Synthesized from {event.original_events_count} raw reasoning steps
-                            </div>
-                          )}
-                        </div>
-                      </div>
+      <div className="flex-1 overflow-hidden min-h-0 relative">
+        {cotEvents.length === 0 ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-gray-500 p-6">
+            <Brain className="w-12 h-12 mx-auto mb-4 text-gray-600" />
+            <p className="text-sm font-mono">
+              Waiting for enhanced reasoning...
+            </p>
+            <p className="text-xs text-gray-600 mt-2">
+              Enter a task below to see real-time reasoning
+            </p>
+          </div>
+        ) : (
+          <ScrollArea className="h-full w-full" ref={scrollAreaRef}>
+            <div className="pl-6 pr-6 pt-6 pb-4 space-y-3">
+              {cotEvents.map((event, index) => (
+                <div 
+                  key={index} 
+                  className={`border rounded-lg p-3 transition-all duration-300 cot-event ${getStepColor(event.type, event.content)}`}
+                >
+                  <div className="grid grid-cols-[auto_1fr] gap-3">
+                    <div className="mt-1">
+                      {getStepIcon(event.type)}
                     </div>
-                  ))}
+                    <div className="min-w-0 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500 font-mono">
+                          {formatTimestamp(event.timestamp)}
+                        </span>
+                         <span className="text-xs text-gray-400 font-mono capitalize">
+                          {event.type.replace(/_/g, ' ')}
+                        </span>
+                        {/* {event.enhanced && (
+                          <span className="text-xs bg-cyan-600/20 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-500/30">
+                            Enhanced by Gemini
+                          </span>
+                        )} */}
+                        {/* {event.confidence && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${
+                            event.confidence === 'high' ? 'bg-green-600/20 text-green-300 border border-green-500/30' :
+                            event.confidence === 'medium' ? 'bg-yellow-600/20 text-yellow-300 border border-yellow-500/30' :
+                            'bg-red-600/20 text-red-300 border border-red-500/30'
+                          }`}>
+                            {event.confidence}
+                          </span>
+                        )} */}
+                      </div>
+                      <div className="text-sm leading-relaxed text-gray-300 font-mono whitespace-pre-wrap break-words">
+                        {event.content}
+                      </div>
+                      {event.enhanced && event.original_events_count && (
+                        <div className="text-xs text-gray-500 font-mono mt-2 italic">
+                          Synthesized from {event.original_events_count} raw reasoning steps
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              )}
-            </ScrollArea>
-          </CardContent>
-        </Card>
+              ))}
+            </div>
+          </ScrollArea>
+        )}
+      </div>
+      <div className="p-4 border-t border-gray-800 bg-black/20">
+        <div className="flex justify-center">
+          <Button
+            variant="default"
+            onClick={handleExecuteTask}
+            disabled={isExecuting || !userQuery.trim()}
+            className="h-12 w-24 rounded-full bg-gray-800 text-white flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 hover:bg-purple-600"
+          >
+            {isExecuting ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <Zap className="w-5 h-5" />
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );
