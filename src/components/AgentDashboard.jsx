@@ -55,7 +55,7 @@ function AgentDashboard() {
         </div>
 
         {/* Browser Window */}
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-2 flex items-center justify-center">
           <BrowserWindow url={debugUrl || browserUrl} />
         </div>
       </div>
