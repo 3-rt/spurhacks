@@ -1,4 +1,5 @@
 import React from 'react';
+import { Minus, Square, X } from 'lucide-react';
 
 function TitleBar({ onCollapse }) {
   const handleClose = () => {
@@ -27,26 +28,19 @@ function TitleBar({ onCollapse }) {
             onClick={onCollapse} 
             className="w-7 h-7 border-none bg-transparent text-gray-400 flex items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-gray-800/50 hover:text-gray-200 rounded-md no-drag-region"
           >
-            <svg width="12" height="12" viewBox="0 0 12 12">
-              <path d="M2 6L10 6" stroke="currentColor" strokeWidth="1"/>
-            </svg>
+            <Minus size={14} />
           </button>
           <button 
             onClick={handleFullscreen} 
             className="w-7 h-7 border-none bg-transparent text-gray-400 flex items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-gray-800/50 hover:text-gray-200 rounded-md no-drag-region"
           >
-            <svg width="10" height="10" viewBox="0 0 10 10">
-              <path d="M1 1H9V9H1V1Z" stroke="currentColor" strokeWidth="1"/>
-              <path d="M3 3H7V7H3V3Z" stroke="currentColor" strokeWidth="1"/>
-            </svg>
+            <Square size={12} />
           </button>
           <button 
             onClick={handleClose} 
             className="w-7 h-7 border-none bg-transparent text-red-400 flex items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-red-600/50 hover:text-white rounded-md no-drag-region"
           >
-            <svg width="12" height="12" viewBox="0 0 12 12">
-              <path d="M3 3L9 9M3 9L9 3" stroke="currentColor" strokeWidth="1"/>
-            </svg>
+            <X size={14} />
           </button>
         </div>
       </div>

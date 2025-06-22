@@ -279,10 +279,8 @@ function AgentDashboard() {
         <div className="h-16 border-b border-gray-800 bg-gray-950/30 backdrop-blur-sm flex items-center justify-between px-8 flex-shrink-0">
           <h1 className="text-2xl font-bold font-mono text-gray-100">Agent Monitor</h1>
           <div className="text-sm text-gray-400 flex items-center gap-3 font-mono">
-            Currently Viewing — {selectedAgent}
-            {debugUrl && (
-              <span className="text-blue-400"> • BrowserBase Active</span>
-            )}
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="whitespace-nowrap">Currently Viewing — {selectedAgent}</span>
           </div>
         </div>
 
