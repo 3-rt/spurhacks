@@ -553,13 +553,19 @@ const AgentCOTStream = () => {
       <div className="flex-1 overflow-hidden min-h-0 relative">
         {cotEvents.length === 0 ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-gray-500 p-6">
-            <Brain className="w-12 h-12 mx-auto mb-4 text-gray-600" />
-            <p className="text-sm font-mono">
-              Waiting for enhanced reasoning...
-            </p>
-            <p className="text-xs text-gray-600 mt-2">
-              Enter a task below to see real-time reasoning
-            </p>
+            <Brain className="w-8 h-8 mx-auto text-gray-600" />
+            
+            {/* veritical distance between the brain and the text */}
+            <div className="h-3"></div>
+
+            <div className="mt-8">
+              <p className="text-sm text-white font-mono">
+                Waiting for enhanced reasoning...
+              </p>
+              <p className="text-xs text-gray-600 mt-2">
+                Enter a task below to see real-time reasoning
+              </p>
+            </div>
           </div>
         ) : (
           <ScrollArea className="h-full w-full" ref={scrollAreaRef}>
