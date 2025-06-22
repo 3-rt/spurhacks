@@ -498,32 +498,28 @@ const AgentCOTStream = () => {
 
       {/* Input Section */}
       <div className="pl-4 pr-6 pt-4 pb-4 border-b border-gray-800 space-y-3 flex-shrink-0">
-        <div className="relative flex items-center">
-          <Input
-            placeholder="¢"
-            value={userQuery}
-            onChange={(e) => setUserQuery(e.target.value)}
-            className={`h-12 bg-gray-950/50 border-transparent text-gray-300 placeholder:text-gray-500 font-mono pl-16 pr-6 transition-all duration-200 rounded-full flex-1 ${
-              isExecuting 
-                ? 'opacity-50 cursor-not-allowed' 
-                : 'hover:bg-gray-900 focus:ring-2 focus:ring-green-500/50'
-            }`}
-            onKeyPress={handleKeyPress}
-          />
+        <div className="flex items-center h-14 bg-[#0A0A0A] rounded-full border border-gray-700/60 px-2 transition-all duration-200 focus-within:border-green-500/70 focus-within:ring-1 focus-within:ring-green-500/20">
           <Button
             size="icon"
             variant="ghost"
             onClick={toggleRecording}
             disabled={isExecuting || isTranscribing}
-            className={`absolute left-2 h-10 w-10 p-0 rounded-full transition-all duration-300 flex-shrink-0 flex items-center justify-center ${
+            className={`h-11 w-11 p-0 rounded-full transition-all duration-300 flex-shrink-0 flex items-center justify-center ${
               isRecording 
                 ? 'bg-red-500 text-white' 
-                : 'text-gray-400 bg-gray-950/50 hover:bg-gray-800/80 hover:text-white'
+                : 'bg-[#1C1C1C] text-gray-400 hover:bg-gray-800'
             }`}
             title={isRecording ? 'Stop recording' : 'Start voice recording'}
           >
             {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
           </Button>
+          <Input
+            placeholder="¢"
+            value={userQuery}
+            onChange={(e) => setUserQuery(e.target.value)}
+            className="h-full bg-transparent border-none text-gray-300 placeholder:text-gray-500 font-mono pl-3 pr-4 flex-1 focus:outline-none focus:ring-0"
+            onKeyPress={handleKeyPress}
+          />
         </div>
         
         {(isRecording || isTranscribing || recordingStatus) && (
