@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import AgentStats from './AgentStats';
-import OperationsList from './OperationsList';
 import BrowserWindow from './BrowserWindow';
 import AgentCOTStream from './AgentCOTStream';
 
@@ -37,15 +35,10 @@ function AgentDashboard() {
 
   return (
     <div className="flex h-full w-full bg-black text-gray-300 overflow-hidden">
-      {/* Left Sidebar - Responsive width */}
+      {/* Left Sidebar - Temporary */}
       <div className="w-80 min-w-64 max-w-96 border-r border-gray-800 bg-gray-950/30 backdrop-blur-sm flex-shrink-0">
-        <div className="flex h-full flex-col overflow-hidden">
-          <div className="p-6 flex-shrink-0">
-            <AgentStats />
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <OperationsList />
-          </div>
+        <div className="flex h-full items-center justify-center">
+          <div className="text-2xl font-mono text-gray-500">temp</div>
         </div>
       </div>
 
@@ -57,9 +50,6 @@ function AgentDashboard() {
           <div className="text-sm text-gray-400 flex items-center gap-3 font-mono">
             <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
             Currently Viewing — {selectedAgent}
-            {debugUrl && (
-              <span className="text-blue-400"> • BrowserBase Active</span>
-            )}
           </div>
         </div>
 

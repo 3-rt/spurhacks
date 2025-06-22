@@ -13,7 +13,8 @@ function AgentStats() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* System Status */}
+        right bar
+        {/* System Status
         <div className="space-y-4">
           <h3 className="text-sm font-mono text-gray-400 uppercase tracking-wider">Stagehand Agent</h3>
           <div className="grid grid-cols-2 gap-4 text-center">
@@ -31,7 +32,7 @@ function AgentStats() {
         <Separator className="bg-gray-700" />
 
         {/* Features */}
-        <div className="space-y-4">
+        {/* <div className="space-y-4">
           <h3 className="text-sm font-mono text-gray-400 uppercase tracking-wider">Features</h3>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -47,7 +48,7 @@ function AgentStats() {
               <span className="font-bold font-mono text-gray-200">✓</span>
             </div>
           </div>
-        </div>
+        </div> */}
       </CardContent>
     </Card>
   )

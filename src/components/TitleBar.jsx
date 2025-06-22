@@ -14,11 +14,11 @@ function TitleBar({ onCollapse }) {
       <div className="w-full flex justify-between items-center px-6">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-gray-900/50 rounded-lg flex items-center justify-center border border-gray-700/50">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-300">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-              <path d="M2 17l10 5 10-5"/>
-              <path d="M2 12l10 5 10-5"/>
-            </svg>
+            <img 
+              src="./logo-gray.png" 
+              alt="Logo" 
+              className="w-5 h-5 object-contain"
+            />
           </div>
           <span className="text-sm font-semibold text-gray-200">AI Agent</span>
         </div>

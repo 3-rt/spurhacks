@@ -492,7 +492,7 @@ const AgentCOTStream = () => {
       <Card className="border-0 bg-transparent flex-shrink-0">
         <CardHeader className="pb-4 pl-6 pr-6">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-mono text-gray-300">Agent Chain of Thought</CardTitle>
+            <CardTitle className="text-lg font-mono text-gray-300">Hermes Chain of Thought</CardTitle>
             <div className="flex gap-2">
               {isStreaming && (
                 <div className="flex items-center gap-2 text-sm text-green-400">
@@ -504,12 +504,6 @@ const AgentCOTStream = () => {
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-400 font-mono">
             <Brain className="w-4 h-4 text-green-500" />
-            <span>{showOnlyEnhanced ? "Enhanced reasoning only" : "Real-time reasoning stream"}</span>
-            {showOnlyEnhanced && (
-              <span className="text-xs bg-cyan-600/20 text-cyan-300 px-2 py-1 rounded border border-cyan-500/30">
-                Gemini Enhanced
-              </span>
-            )}
             {isExecuting && userQuery && (
               <span className="text-xs bg-green-700 px-2 py-1 rounded text-green-200">
                 Active
@@ -602,15 +596,12 @@ const AgentCOTStream = () => {
                     <Brain className="w-12 h-12 mx-auto mb-4 text-gray-600" />
                     <p className="text-sm font-mono">
                       {showOnlyEnhanced 
-                        ? "Waiting for enhanced reasoning..." 
+                        ? "Waiting for a task..." 
                         : "Waiting for agent thoughts..."
                       }
                     </p>
                     <p className="text-xs text-gray-600 mt-2">
-                      {showOnlyEnhanced 
-                        ? "Enter a task below to see Gemini-enhanced insights"
-                        : "Enter a task below to see real-time reasoning"
-                      }
+                        Enter a task below to see real-time reasoning
                     </p>
                   </div>
                 ) : (
@@ -631,12 +622,12 @@ const AgentCOTStream = () => {
                              <span className="text-xs text-gray-400 font-mono capitalize">
                               {event.type.replace(/_/g, ' ')}
                             </span>
-                            {event.enhanced && (
+                            {/* {event.enhanced && (
                               <span className="text-xs bg-cyan-600/20 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-500/30">
                                 Enhanced by Gemini
                               </span>
-                            )}
-                            {event.confidence && (
+                            )} */}
+                            {/* {event.confidence && (
                               <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${
                                 event.confidence === 'high' ? 'bg-green-600/20 text-green-300 border border-green-500/30' :
                                 event.confidence === 'medium' ? 'bg-yellow-600/20 text-yellow-300 border border-yellow-500/30' :
@@ -644,7 +635,7 @@ const AgentCOTStream = () => {
                               }`}>
                                 {event.confidence}
                               </span>
-                            )}
+                            )} */}
                           </div>
                           <div className="text-sm leading-relaxed text-gray-300 font-mono whitespace-pre-wrap break-words">
                             {event.content}
