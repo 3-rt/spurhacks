@@ -677,11 +677,11 @@ const AgentCOTStream = () => {
                       key={index} 
                       className={`border rounded-lg p-3 transition-all duration-300 cot-event ${getStepColor(event.type, event.content)}`}
                     >
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 mt-1">
+                      <div className="grid grid-cols-[auto_1fr] gap-3">
+                        <div className="mt-1">
                           {getStepIcon(event.type)}
                         </div>
-                        <div className="flex-1 min-w-0 space-y-2">
+                        <div className="min-w-0 space-y-2">
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-gray-500 font-mono">
                               {formatTimestamp(event.timestamp)}
@@ -704,9 +704,9 @@ const AgentCOTStream = () => {
                               </span>
                             )}
                           </div>
-                          <pre className="text-sm leading-relaxed text-gray-300 font-mono whitespace-pre-wrap break-words">
+                          <div className="text-sm leading-relaxed text-gray-300 font-mono whitespace-pre-wrap break-words">
                             {event.content}
-                          </pre>
+                          </div>
                           {event.enhanced && event.original_events_count && (
                             <div className="text-xs text-gray-500 font-mono mt-2 italic">
                               Synthesized from {event.original_events_count} raw reasoning steps
