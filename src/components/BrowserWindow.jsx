@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Separator } from "./ui/separator";
-import { Eye, Minimize2, Maximize2, X, RefreshCw, ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
+import { Eye } from "lucide-react";
 
 function BrowserWindow({ url = "https://ui.shadcn.com/charts" }) {
   const [debugUrl, setDebugUrl] = useState(null);
