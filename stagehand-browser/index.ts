@@ -1,4 +1,5 @@
 import { Stagehand, Page, BrowserContext } from "@browserbasehq/stagehand";
+import { Browserbase } from "@browserbasehq/sdk";
 import StagehandConfig from "./stagehand.config.js";
 import chalk from "chalk";
 import boxen from "boxen";
@@ -103,11 +104,12 @@ function interceptStagehandLogs() {
 }
 
 // Enhanced agent with COT logging
-async function createCOTAgent(stagehand: Stagehand,memoryContext: string = "", enhancedQuery: string = "") {
+async function createCOTAgent(stagehand: Stagehand, memoryContext: string = "", enhancedQuery: string = "", personalInfoContext: string = "") {
   const agent = stagehand.agent({
     instructions: `You are a helpful web assistant that can use a browser to complete any task the user requests.
     🧠 MEMORY SYSTEM: You have access to previous actions and information. The memory system finds relevant past actions based on word overlap with your current request.
     MEMORY CONTEXT:${memoryContext}
+    ${personalInfoContext}
     IMPORTANT INSTRUCTIONS:
     1. Use the memory context to understand what the user is referring to when they mention "same", "yesterday", "last week", "previous", or similar references
     2. If the memory shows specific details (names, symbols, locations, etc.), use those specific details in your search
@@ -115,11 +117,24 @@ async function createCOTAgent(stagehand: Stagehand,memoryContext: string = "", e
     4. If the user says "same" and memory shows specific details, use those details to make the search more specific
     5. If the user says "yesterday" or "last week", look at the memory context for what was done then
     6. Use the enhanced query if it's different from the original, otherwise use the original query but apply the memory context
+    7. Use personal information when relevant to personalize responses or fill in forms
+    8. When navigating websites, use scrolling to explore content thoroughly:
+       - Scroll down to see more content, load lazy-loaded elements, or find specific information
+       - Scroll up to return to previous content or navigation elements
+       - Use smooth scrolling when appropriate for better user experience
+       - Scroll to specific sections when looking for particular information
+    9. Use common web navigation actions:
+       - Click buttons, links, and interactive elements
+       - Fill out forms with appropriate information
+       - Use search functionality when available
+       - Navigate through pagination if present
+       - Wait for dynamic content to load
+       - Handle popups, modals, and overlays appropriately
     ORIGINAL QUERY: "${process.env.USER_QUERY || ''}"
     ENHANCED QUERY: "${enhancedQuery}"
     IMPORTANT: You must think through your process step by step and explain your reasoning as you go. Use the following format for your thinking:
     1. First, analyze the user's request and break it down into clear steps
-    @@ -54,7 +81,13 @@ When the user asks to save links, extract and clearly present all relevant URLs.
+    When the user asks to save links, extract and clearly present all relevant URLs.
     Be thorough and complete the entire task from start to finish.
     Do not ask the user for any information, just use the browser to complete the task.
     Always think aloud and explain your reasoning process as you work.
@@ -167,6 +182,25 @@ async function createCOTAgent(stagehand: Stagehand,memoryContext: string = "", e
   return agent;
 }
 
+/**
+ * Start a BrowserBase session with debug interface
+ */
+async function startBBSSession() {
+  const browserbase = new Browserbase();
+  const session = await browserbase.sessions.create({
+    projectId: process.env.BROWSERBASE_PROJECT_ID!,
+  });
+  const debugUrl = await browserbase.sessions.debug(session.id);
+  
+  emitStagehandOutput('session_created', `BrowserBase session created: ${session.id}`, 'info');
+  emitStagehandOutput('debug_url', `Debug URL: ${debugUrl.debuggerFullscreenUrl}`, 'info');
+  
+  return {
+    sessionId: session.id,
+    debugUrl: debugUrl.debuggerFullscreenUrl,
+  };
+}
+
 async function main({
     page,
     context,
@@ -189,12 +223,27 @@ async function main({
         const relevantMemories = await memoryManager.searchMemories(userQuery, 3);
         let memoryContext = "";
         let enhancedQuery = userQuery;
+        let personalInfoContext = "";
         
         if (relevantMemories.length > 0) {
             console.log(chalk.cyan(`🧠 Found ${relevantMemories.length} relevant memories with word overlap:`));
             
             // Use the memory-based enhancement
-            enhancedQuery = await memoryManager.enhanceQueryWithMemories(userQuery, relevantMemories);
+            const enhancementResult = await memoryManager.enhanceQueryWithMemories(userQuery, relevantMemories);
+            
+            // Handle the new response format
+            if (typeof enhancementResult === 'string') {
+                // Backward compatibility with old format
+                enhancedQuery = enhancementResult;
+            } else if (enhancementResult && typeof enhancementResult === 'object') {
+                // New format with enhancedQuery and personalInfo
+                enhancedQuery = enhancementResult.enhancedQuery || userQuery;
+                
+                // Log personal information if any was extracted
+                if (enhancementResult.personalInfo && Object.keys(enhancementResult.personalInfo).length > 0) {
+                    console.log(chalk.green(`👤 Personal information extracted:`, enhancementResult.personalInfo));
+                }
+            }
             
             // Create memory context for the agent
             memoryContext = "\n\n🧠 MEMORY CONTEXT - Previous actions that match your request:\n";
@@ -228,12 +277,18 @@ async function main({
             console.log(chalk.yellow("🧠 No relevant memories found for this query"));
         }
         
+        // Get personal information context
+        personalInfoContext = await memoryManager.getPersonalInfoContext();
+        if (personalInfoContext) {
+            console.log(chalk.blue(`👤 Personal profile context loaded`));
+        }
+        
         interceptStagehandLogs();
         
         emitStagehandOutput('task_start', `🎬 Starting AI automation for: "${userQuery}"`, 'info');
         
         // Create a single web agent that can handle any task with enhanced COT instructions and memory context
-        const agent = await createCOTAgent(stagehand, memoryContext, enhancedQuery);
+        const agent = await createCOTAgent(stagehand, memoryContext, enhancedQuery, personalInfoContext);
 
         // Emit COT event for agent creation
         emitStagehandOutput("agent_created", "Web automation agent initialized and ready to execute task", "info");
@@ -330,14 +385,12 @@ async function main({
 }
 
 /**
- * This is the main function that runs when you do npm run start
- *
- * YOU PROBABLY DON'T NEED TO MODIFY ANYTHING BELOW THIS POINT!
- *
+ * Initialize and run the main() function with BrowserBase session
  */
-async function run() {
+async function runStagehand(sessionId?: string) {
     const stagehand = new Stagehand({
         ...StagehandConfig,
+        browserbaseSessionID: sessionId,
     });
     await stagehand.init();
 
@@ -353,8 +406,32 @@ async function run() {
     return result;
 }
 
+/**
+ * This is the main function that runs when you do npm run start
+ *
+ * YOU PROBABLY DON'T NEED TO MODIFY ANYTHING BELOW THIS POINT!
+ *
+ */
+async function run() {
+    try {
+        // Start a BrowserBase session with debug interface
+        const { sessionId, debugUrl } = await startBBSSession();
+        
+        // Run Stagehand with the session ID
+        const result = await runStagehand(sessionId);
+        
+        return result;
+    } catch (error) {
+        console.error('Error in run function:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : String(error)
+        };
+    }
+}
+
 // Export for use in Electron
-export { run as runStagehand };
+export { run as runStagehand, startBBSSession };
 
 // Run the app
 run();

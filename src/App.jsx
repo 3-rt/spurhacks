@@ -22,16 +22,16 @@ function App() {
 
   if (!isExpanded) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center h-screen bg-black">
         <CompactView onExpand={handleExpand} />
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-900 text-white min-h-screen flex flex-col" style={{ height: '100vh' }}>
+    <div className="bg-black text-white h-screen flex flex-col overflow-hidden">
       <TitleBar onCollapse={handleCollapse} />
-      <div className="flex flex-grow">
+      <div className="flex flex-1 overflow-hidden">
         <AgentDashboard />
       </div>
     </div>

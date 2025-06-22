@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen } = require("electron")
+const { app, BrowserWindow, ipcMain, screen, Menu, globalShortcut } = require("electron")
 const path = require("path")
 const { spawn } = require("child_process")
 const fs = require("fs")
@@ -61,7 +61,16 @@ function createWindow() {
     if (mainWindow.isMaximized()) {
       mainWindow.unmaximize()
     } else {
-      mainWindow.maximize()
+      // Use work area size to avoid taskbar overlap
+      const primaryDisplay = screen.getPrimaryDisplay()
+      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
+      
+      mainWindow.setBounds({
+        x: 0,
+        y: 0,
+        width: screenWidth,
+        height: screenHeight
+      })
     }
   })
 
@@ -72,22 +81,36 @@ function createWindow() {
   // Handle window expansion to fixed size on the right
   ipcMain.handle("expand-window", () => {
     const primaryDisplay = screen.getPrimaryDisplay()
-    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
+    const { height: screenHeight } = primaryDisplay.workAreaSize
     
-    // Calculate 16:9 dimensions based on 90% of screen height
-    const aspectHeight = Math.floor(screenHeight * 0.9);
-    const aspectWidth = Math.floor(aspectHeight * (16 / 9));
+    // Use fixed dimensions based on content size
+    const windowWidth = 876  // 80px left sidebar + 700px browser window + 96px right sidebar
+    const windowHeight = Math.min(700, screenHeight * 0.8)  // Cap at 700px or 80% of screen height
     
-    // Center the window
-    const x = Math.floor((screenWidth - aspectWidth) / 2);
-    const y = Math.floor((screenHeight - aspectHeight) / 2);
+    // Center the window horizontally and vertically
+    const x = Math.floor((primaryDisplay.workAreaSize.width - windowWidth) / 2)
+    const y = Math.floor((screenHeight - windowHeight) / 2)
     
     mainWindow.setBounds({
       x: x,
       y: y,
-      width: aspectWidth,
-      height: aspectHeight
+      width: windowWidth,
+      height: windowHeight
     })
+    
+    // Ensure the window is not maximized to maintain our custom bounds
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize()
+    }
+  })
+
+  // Handle fullscreen toggle
+  ipcMain.handle("toggle-fullscreen", () => {
+    if (mainWindow.isFullScreen()) {
+      mainWindow.setFullScreen(false)
+    } else {
+      mainWindow.setFullScreen(true)
+    }
   })
 
   // Handle window collapse
@@ -610,7 +633,27 @@ function createWindow() {
   })
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  createWindow()
+  
+  // Register global keyboard shortcuts
+  globalShortcut.register('F11', () => {
+    if (mainWindow) {
+      if (mainWindow.isFullScreen()) {
+        mainWindow.setFullScreen(false)
+      } else {
+        mainWindow.setFullScreen(true)
+      }
+    }
+  })
+  
+  // Register Escape key to exit fullscreen
+  globalShortcut.register('Escape', () => {
+    if (mainWindow && mainWindow.isFullScreen()) {
+      mainWindow.setFullScreen(false)
+    }
+  })
+})
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {

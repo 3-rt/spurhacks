@@ -23,3 +23,4 @@ stagehand-browser/automation-results.png
 *.wav
 
 public/memory.json
+public/personal_profile.json
