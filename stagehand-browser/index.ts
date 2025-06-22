@@ -152,20 +152,20 @@ async function createCOTAgent(stagehand: Stagehand, memoryContext: string = "", 
   agent.execute = async (instructionOrOptions: string | any) => {
     const query = typeof instructionOrOptions === 'string' ? instructionOrOptions : instructionOrOptions.instruction || '';
     
-    emitStagehandOutput("thinking_start", `Starting to think about: "${query}"`, "info");
+    // emitStagehandOutput("thinking_start", `Starting to think about: "${query}"`, "info");
     
     try {
       // Emit thinking events during execution
-      emitStagehandOutput("analyzing_request", `Breaking down the request into manageable steps`, "info");
+    //   emitStagehandOutput("analyzing_request", `Breaking down the request into manageable steps`, "info");
       
       // Add a small delay to simulate thinking
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    //   await new Promise(resolve => setTimeout(resolve, 1000));
       
-      emitStagehandOutput("planning_approach", `Planning the best approach to complete this task`, "info");
+    //   emitStagehandOutput("planning_approach", `Planning the best approach to complete this task`, "info");
       
-      await new Promise(resolve => setTimeout(resolve, 800));
+    //   await new Promise(resolve => setTimeout(resolve, 800));
       
-      emitStagehandOutput("executing_steps", `Beginning step-by-step execution`, "info");
+    //   emitStagehandOutput("executing_steps", `Beginning step-by-step execution`, "info");
       
       // Execute the original method
       const result = await originalExecute(instructionOrOptions);
@@ -297,16 +297,16 @@ async function main({
         
         interceptStagehandLogs();
         
-        emitStagehandOutput('task_start', `🎬 Starting AI automation for: "${userQuery}"`, 'info');
+        // emitStagehandOutput('task_start', `🎬 Starting AI automation for: "${userQuery}"`, 'info');
         
         // Create a single web agent that can handle any task with enhanced COT instructions and memory context
         const agent = await createCOTAgent(stagehand, memoryContext, enhancedQuery, personalInfoContext);
 
         // Emit COT event for agent creation
-        emitStagehandOutput("agent_created", "Web automation agent initialized and ready to execute task", "info");
+        // emitStagehandOutput("agent_created", "Web automation agent initialized and ready to execute task", "info");
 
         // Execute the enhanced query with the agent - this will generate real Stagehand logs
-        emitStagehandOutput('execution_start', '🚀 Beginning task execution...', 'info');
+        // emitStagehandOutput('execution_start', '🚀 Beginning task execution...', 'info');
         
         // Only navigate to DuckDuckGo if this is the first time ever
         if (isFirstTimeEver) {

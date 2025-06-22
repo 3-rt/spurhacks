@@ -489,50 +489,6 @@ const AgentCOTStream = () => {
     }
   };
 
-  const testEnhancedCOT = () => {
-    const enhancedEvents = [
-      {
-        type: "enhanced_reasoning",
-        content: "I'm analyzing your request to understand what you're looking for. Let me break this down into clear steps to help you effectively.",
-        confidence: "high",
-        step_number: 1,
-        timestamp: new Date().toISOString(),
-        enhanced: true,
-        original_events_count: 3
-      },
-      {
-        type: "enhanced_reasoning", 
-        content: "I've identified the key components of your task and I'm now planning the most efficient approach to complete it successfully.",
-        confidence: "high",
-        step_number: 2,
-        timestamp: new Date().toISOString(),
-        enhanced: true,
-        original_events_count: 4
-      },
-      {
-        type: "enhanced_reasoning",
-        content: "I'm now executing the plan step by step, making sure to handle any edge cases and provide you with the best possible result.",
-        confidence: "medium",
-        step_number: 3,
-        timestamp: new Date().toISOString(),
-        enhanced: true,
-        original_events_count: 2
-      }
-    ];
-
-    setIsStreaming(true);
-    enhancedEvents.forEach((event, index) => {
-      setTimeout(() => {
-        setCotEvents(prev => [event, ...prev]);
-        scrollToTop();
-      }, index * 1500);
-    });
-
-    setTimeout(() => {
-      setIsStreaming(false);
-    }, enhancedEvents.length * 1500 + 1000);
-  };
-
   return (
     <div className="flex h-full flex-col bg-[#121212] overflow-hidden">
       {/* Header */}
@@ -547,53 +503,6 @@ const AgentCOTStream = () => {
                   <span>Live</span>
                 </div>
               )}
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                onClick={testCOTEvents}
-                className="h-7 px-2 hover:bg-gray-800 text-gray-400"
-                disabled={isStreaming || isExecuting}
-                title="Test regular COT events"
-              >
-                <Zap className="w-3 h-3" />
-              </Button>
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                onClick={testBrowserBase}
-                className="h-7 px-2 hover:bg-gray-800 text-blue-400"
-                disabled={isStreaming || isExecuting}
-                title="Test BrowserBase connection"
-              >
-                <Globe className="w-3 h-3" />
-              </Button>
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                onClick={testEnhancedCOT}
-                className="h-7 px-2 hover:bg-gray-800 text-cyan-400"
-                disabled={isStreaming || isExecuting}
-                title="Test enhanced COT with Gemini"
-              >
-                <Brain className="w-3 h-3" />
-              </Button>
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                onClick={() => setShowOnlyEnhanced(!showOnlyEnhanced)}
-                className={`h-7 px-2 hover:bg-gray-800 ${showOnlyEnhanced ? 'text-cyan-400' : 'text-gray-400'}`}
-                title={showOnlyEnhanced ? "Show all events" : "Show only enhanced events"}
-              >
-                {showOnlyEnhanced ? <Brain className="w-3 h-3" /> : <Zap className="w-3 h-3" />}
-              </Button>
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                onClick={clearEvents}
-                className="h-7 px-2 hover:bg-gray-800 text-gray-400"
-              >
-                <RotateCcw className="w-3 h-3" />
-              </Button>
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-400 font-mono">

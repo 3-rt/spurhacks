@@ -281,7 +281,7 @@ function createWindow() {
                     'thinking_start',
                     'analyzing_request',
                     'planning_approach',
-                    'executing_steps'
+                    // 'executing_steps'
                   ];
                   
                   // Skip raw reasoning events when enhancement is enabled
