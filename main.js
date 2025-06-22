@@ -53,8 +53,7 @@ function createWindow() {
     backgroundColor: '#111827',
     resizable: true,
     movable: true,
-    alwaysOnTop: true,
-    skipTaskbar: true,
+    alwaysOnTop: true, // Start collapsed, so keep on top
     show: false,
   })
 
@@ -84,6 +83,9 @@ function createWindow() {
         width: screenWidth,
         height: screenHeight
       })
+      
+      // Set alwaysOnTop to false when maximized (expanded state)
+      mainWindow.setAlwaysOnTop(false)
     }
   })
 
@@ -113,6 +115,9 @@ function createWindow() {
       height: windowHeight
     })
     
+    // Set alwaysOnTop to false when expanded
+    mainWindow.setAlwaysOnTop(false)
+    
     // Ensure the window is not maximized to maintain our custom bounds
     if (mainWindow.isMaximized()) {
       mainWindow.unmaximize()
@@ -140,6 +145,9 @@ function createWindow() {
       width: 80,
       height: 80
     })
+    
+    // Set alwaysOnTop to true when collapsed
+    mainWindow.setAlwaysOnTop(true)
   })
 
   // Handle window dragging
