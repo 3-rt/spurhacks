@@ -233,6 +233,10 @@ const AgentCOTStream = () => {
     if (!userQuery.trim() || isExecuting) return;
     
     console.log("AgentCOTStream: Starting task execution");
+    
+    // Dispatch event to notify other components (like AgentDashboard) that a task is starting
+    window.dispatchEvent(new CustomEvent('stagehand-task-start'));
+    
     setIsExecuting(true);
     setCotEvents([]); // Clear previous events
     setCurrentStep(0);

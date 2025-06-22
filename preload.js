@@ -56,6 +56,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Enhanced Stagehand with memory integration
     executeStagehandWithMemory: (userQuery) => ipcRenderer.invoke('execute-stagehand-with-memory', userQuery),
     
+    // System connectivity tests
+    testGroqConnection: () => ipcRenderer.invoke('test-groq-connection'),
+    
     // Remove listeners
     removeAllListeners: (channel) => {
         ipcRenderer.removeAllListeners(channel);

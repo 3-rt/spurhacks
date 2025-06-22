@@ -484,6 +484,45 @@ function createWindow() {
     }
   })
 
+  // Handle Groq connectivity test
+  ipcMain.handle('test-groq-connection', async () => {
+    console.log('Main: Testing Groq connectivity...')
+    
+    try {
+      const apiKey = process.env.GROQ_API_KEY
+      
+      if (!apiKey) {
+        return { success: false, error: 'GROQ_API_KEY not configured' }
+      }
+      
+      // Test with a simple fetch request since Groq SDK might not be installed
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'Test connection' }],
+          model: 'mixtral-8x7b-32768',
+          max_tokens: 1
+        })
+      })
+      
+      if (response.ok) {
+        console.log('Groq connectivity test successful')
+        return { success: true, response: 'Connected to Groq API' }
+      } else {
+        const errorData = await response.text()
+        console.error('Groq API error:', errorData)
+        return { success: false, error: `API Error: ${response.status}` }
+      }
+    } catch (error) {
+      console.error('Groq connectivity test failed:', error)
+      return { success: false, error: error.message }
+    }
+  })
+
   // Enhanced Stagehand execution with memory integration
   ipcMain.handle("execute-stagehand-with-memory", async (event, userQuery) => {
     try {
