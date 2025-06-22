@@ -1021,6 +1021,14 @@ body {
   white-space: nowrap;
 }
 
+.whitespace-pre-wrap {
+  white-space: pre-wrap;
+}
+
+.break-words {
+  word-break: break-word;
+}
+
 /* Text decoration */
 .underline-offset-4 {
   text-underline-offset: 4px;

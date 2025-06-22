@@ -361,7 +361,7 @@ const AgentCOTStream = () => {
             className={`h-12 bg-gray-900 border-gray-700 text-gray-300 placeholder:text-gray-500 font-mono pr-14 ${
               isExecuting ? 'opacity-50 cursor-not-allowed' : ''
             }`}
-            // disabled={isExecuting}
+            disabled={isExecuting}
             onKeyPress={handleKeyPress}
           />
           <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center">
@@ -403,11 +403,11 @@ const AgentCOTStream = () => {
                       key={index} 
                       className={`border rounded-lg p-3 transition-all duration-300 cot-event ${getStepColor(event.type, event.content)}`}
                     >
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 mt-1">
+                      <div className="grid grid-cols-[auto_1fr] gap-3">
+                        <div className="mt-1">
                           {getStepIcon(event.type)}
                         </div>
-                        <div className="flex-1 min-w-0 space-y-2">
+                        <div className="min-w-0 space-y-2">
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-gray-500 font-mono">
                               {formatTimestamp(event.timestamp)}
@@ -416,9 +416,9 @@ const AgentCOTStream = () => {
                               {event.type.replace(/_/g, ' ')}
                             </span>
                           </div>
-                          <pre className="text-sm leading-relaxed text-gray-300 font-mono whitespace-pre-wrap break-words">
+                          <div className="text-sm leading-relaxed text-gray-300 font-mono whitespace-pre-wrap break-words">
                             {event.content}
-                          </pre>
+                          </div>
                         </div>
                       </div>
                     </div>
