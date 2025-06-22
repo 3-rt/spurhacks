@@ -49,7 +49,7 @@ function AgentDashboard() {
           <h1 className="text-2xl font-bold font-mono text-gray-100">Agent Monitor</h1>
           <div className="text-sm text-gray-400 flex items-center gap-3 font-mono">
             <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-            Currently Viewing — {selectedAgent}
+            <span className="whitespace-nowrap">Currently Viewing — {selectedAgent}</span>
           </div>
         </div>
 

@@ -489,29 +489,12 @@ const AgentCOTStream = () => {
   return (
     <div className="flex h-full flex-col bg-[#121212] overflow-hidden">
       {/* Header */}
-      <Card className="border-0 bg-transparent flex-shrink-0">
-        <CardHeader className="pb-4 pl-6 pr-6">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-mono text-gray-300">Hermes Chain of Thought</CardTitle>
-            <div className="flex gap-2">
-              {isStreaming && (
-                <div className="flex items-center gap-2 text-sm text-green-400">
-                  <div className="w-2 h-2 bg-green-500 rounded-full thinking-indicator"></div>
-                  <span>Live</span>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-400 font-mono">
-            <Brain className="w-4 h-4 text-green-500" />
-            {isExecuting && userQuery && (
-              <span className="text-xs bg-green-700 px-2 py-1 rounded text-green-200">
-                Active
-              </span>
-            )}
-          </div>
-        </CardHeader>
-      </Card>
+      <div className="h-16 border-b border-gray-800 flex-shrink-0 flex items-center px-6">
+        <div className="flex items-center gap-2">
+          <Brain className="w-4 h-4 text-green-500" />
+          <h2 className="text-lg font-mono text-gray-300">Hermes Chain of Thought</h2>
+        </div>
+      </div>
 
       {/* Input Section */}
       <div className="pl-4 pr-6 pt-4 pb-4 border-b border-gray-800 space-y-3 flex-shrink-0">
@@ -586,26 +569,29 @@ const AgentCOTStream = () => {
       </div>
 
       {/* COT Events Stream - Scrollable Area */}
-      <div className="flex-1 overflow-hidden min-h-0">
+      <div className="flex-1 overflow-hidden min-h-0 pt-6">
         <Card className="h-full border-0 bg-transparent">
           <CardContent className="p-0 h-full">
             <ScrollArea className="h-full w-full" ref={scrollAreaRef}>
-              <div className="pl-6 pr-6 py-4 space-y-3">
-                {cotEvents.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500">
-                    <Brain className="w-12 h-12 mx-auto mb-4 text-gray-600" />
-                    <p className="text-sm font-mono">
-                      {showOnlyEnhanced 
-                        ? "Waiting for a task..." 
-                        : "Waiting for agent thoughts..."
-                      }
-                    </p>
-                    <p className="text-xs text-gray-600 mt-2">
-                        Enter a task below to see real-time reasoning
-                    </p>
-                  </div>
-                ) : (
-                  cotEvents.map((event, index) => (
+              {cotEvents.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center text-gray-500 p-6">
+                  <Brain className="w-12 h-12 mx-auto mb-4 text-gray-600" />
+                  <p className="text-sm font-mono">
+                    {showOnlyEnhanced 
+                      ? "Waiting for enhanced reasoning..." 
+                      : "Waiting for agent thoughts..."
+                    }
+                  </p>
+                  <p className="text-xs text-gray-600 mt-2">
+                    {showOnlyEnhanced 
+                      ? "Enter a task below to see Gemini-enhanced insights"
+                      : "Enter a task below to see real-time reasoning"
+                    }
+                  </p>
+                </div>
+              ) : (
+                <div className="pl-6 pr-6 py-4 space-y-3">
+                  {cotEvents.map((event, index) => (
                     <div 
                       key={index} 
                       className={`border rounded-lg p-3 transition-all duration-300 cot-event ${getStepColor(event.type, event.content)}`}
@@ -648,9 +634,9 @@ const AgentCOTStream = () => {
                         </div>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </ScrollArea>
           </CardContent>
         </Card>
