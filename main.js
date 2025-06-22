@@ -79,19 +79,17 @@ function createWindow() {
   })
 
   // Handle window expansion to fixed size on the right
-  // Updated to use 95% of screen dimensions for better fullscreen experience
-  // This ensures proper "bottom out" behavior and works well on 16:9 monitors
   ipcMain.handle("expand-window", () => {
     const primaryDisplay = screen.getPrimaryDisplay()
-    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
+    const { height: screenHeight } = primaryDisplay.workAreaSize
     
-    // Use 95% of screen dimensions for better fullscreen experience
-    const windowWidth = Math.floor(screenWidth * 0.95);
-    const windowHeight = Math.floor(screenHeight * 0.95);
+    // Use fixed dimensions based on content size
+    const windowWidth = 876  // 80px left sidebar + 700px browser window + 96px right sidebar
+    const windowHeight = Math.min(700, screenHeight * 0.8)  // Cap at 700px or 80% of screen height
     
-    // Center the window
-    const x = Math.floor((screenWidth - windowWidth) / 2);
-    const y = Math.floor((screenHeight - windowHeight) / 2);
+    // Center the window horizontally and vertically
+    const x = Math.floor((primaryDisplay.workAreaSize.width - windowWidth) / 2)
+    const y = Math.floor((screenHeight - windowHeight) / 2)
     
     mainWindow.setBounds({
       x: x,
