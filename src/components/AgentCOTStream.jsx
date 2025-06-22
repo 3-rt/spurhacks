@@ -458,87 +458,18 @@ const AgentCOTStream = () => {
             )}
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="relative">
-              <Input
-                placeholder="Enter task for browser automation..."
-                value={userQuery}
-                onChange={(e) => setUserQuery(e.target.value)}
-                className={`h-8 bg-gray-900 border-gray-700 text-gray-300 placeholder:text-gray-500 font-mono pr-16 ${
-                  isExecuting ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-                disabled={isExecuting}
-                onKeyPress={handleKeyPress}
-              />
-              <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
-                {isExecuting && (
-                  <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
-                )}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={toggleRecording}
-                  disabled={isExecuting || isTranscribing}
-                  className={`h-6 w-6 p-0 rounded-full transition-all duration-300 ${
-                    isRecording 
-                      ? 'mic-recording recording-pulse recording-glow' 
-                      : 'hover:bg-gray-700 text-gray-400'
-                  }`}
-                  title={isRecording ? 'Stop recording' : 'Start voice recording'}
-                >
-                  {isRecording ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
-                </Button>
-              </div>
-            </div>
-            {(isRecording || isTranscribing || recordingStatus) && (
-              <div className="text-xs text-gray-400 font-mono text-center">
-                {isRecording && <span className="text-red-400">● Recording</span>}
-                {isTranscribing && <span className="text-blue-400">Processing audio...</span>}
-                {recordingStatus && !isRecording && !isTranscribing && (
-                  <span className={recordingStatus.includes('Error') ? 'text-red-400' : 'text-green-400'}>
-                    {recordingStatus}
-                  </span>
-                )}
-              </div>
-            )}
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleExecuteTask}
-                disabled={isExecuting || !userQuery.trim()}
-                className="flex-1 bg-green-600 hover:bg-green-700 border border-green-500 text-white font-mono text-xs"
-              >
-                <Send className="w-3 h-3 mr-1" />
-                {isExecuting ? 'Executing...' : 'Execute'}
-              </Button>
-              {isExecuting && (
-                <Button 
-                  onClick={stopExecution}
-                  className="bg-red-600 hover:bg-red-700 border border-red-500 text-white font-mono text-xs"
-                >
-                  <Square className="w-3 h-3" />
-                </Button>
-              )}
-            </div>
-            {isExecuting && (
-              <div className="text-xs text-gray-400 font-mono text-center">
-                Executing: "{userQuery}"
-              </div>
-            )}
-          </div>
-        </CardContent>
       </Card>
 
       {/* COT Events Stream */}
       <Card className={`flex-1 border-0 bg-transparent min-h-0 ${isStreaming ? 'cot-streaming' : ''}`}>
         <CardContent className="p-0 h-full">
           <ScrollArea className="h-full" ref={scrollAreaRef}>
-            <div className="px-6 space-y-3">
+            <div className="px-6 space-y-3 h-full">
               {cotEvents.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
                   <Brain className="w-12 h-12 mx-auto mb-4 text-gray-600" />
                   <p className="text-sm font-mono">Waiting for agent thoughts...</p>
-                  <p className="text-xs text-gray-600 mt-2">Enter a task above to see real-time reasoning</p>
+                  <p className="text-xs text-gray-600 mt-2">Enter a task below to see real-time reasoning</p>
                 </div>
               ) : (
                 cotEvents.map((event, index) => (
@@ -564,7 +495,7 @@ const AgentCOTStream = () => {
                             </span>
                           )}
                           <span className="text-xs text-gray-400 font-mono capitalize">
-                            {event.type.replace('_', ' ')}
+                            {event.type.replace(/_/g, ' ')}
                           </span>
                         </div>
                         <p className="text-sm leading-relaxed text-gray-300 font-mono">
@@ -579,6 +510,70 @@ const AgentCOTStream = () => {
           </ScrollArea>
         </CardContent>
       </Card>
+
+      {/* Input Section */}
+      <div className="p-4 border-t border-gray-700 space-y-3">
+        <div className="relative">
+          <Input
+            placeholder="find me a yt vid on cows"
+            value={userQuery}
+            onChange={(e) => setUserQuery(e.target.value)}
+            className={`h-12 bg-gray-900 border-gray-700 text-gray-300 placeholder:text-gray-500 font-mono pr-14 ${
+              isExecuting ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            disabled={isExecuting}
+            onKeyPress={handleKeyPress}
+          />
+          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+            {isExecuting && (
+              <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin mr-2"></div>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleExecuteTask}
+              disabled={isExecuting || !userQuery.trim()}
+              className="h-8 w-8 p-0 rounded-md bg-white hover:bg-gray-200 text-gray-900"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {isExecuting && (
+          <div className="text-xs text-gray-400 font-mono text-center">
+            Executing: "{userQuery}"
+          </div>
+        )}
+        
+        <div className="flex flex-col items-center gap-2 pt-2">
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={toggleRecording}
+            disabled={isExecuting || isTranscribing}
+            className={`w-16 h-16 rounded-full p-0 transition-all duration-300 flex items-center justify-center border-2 ${
+              isRecording 
+                ? 'mic-recording recording-pulse recording-glow border-red-500 text-red-400' 
+                : 'hover:bg-gray-800 text-gray-400 border-gray-600'
+            }`}
+            title={isRecording ? 'Stop recording' : 'Start voice recording'}
+          >
+            {isRecording ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+          </Button>
+          {(isRecording || isTranscribing || recordingStatus) && (
+            <div className="text-xs text-gray-400 font-mono text-center">
+              {isRecording && <span className="text-red-400">● Recording</span>}
+              {isTranscribing && <span className="text-blue-400">Processing audio...</span>}
+              {recordingStatus && !isRecording && !isTranscribing && (
+                <span className={recordingStatus.includes('Error') ? 'text-red-400' : 'text-green-400'}>
+                  {recordingStatus}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
