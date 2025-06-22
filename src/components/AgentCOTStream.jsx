@@ -498,7 +498,7 @@ const AgentCOTStream = () => {
 
       {/* Input Section */}
       <div className="pl-4 pr-6 pt-4 pb-4 border-b border-gray-800 space-y-3 flex-shrink-0">
-        <div className="flex items-center h-14 bg-[#0A0A0A] rounded-full border border-gray-700/60 px-2 transition-all duration-200 focus-within:border-green-500/70 focus-within:ring-1 focus-within:ring-green-500/20">
+        <div className="flex flex-row items-center h-14 bg-[#0A0A0A] rounded-full border border-gray-700/60 px-2 transition-all duration-200 focus-within:border-green-500/70 focus-within:ring-1 focus-within:ring-green-500/20">
           <Button
             size="icon"
             variant="ghost"
@@ -517,7 +517,7 @@ const AgentCOTStream = () => {
             placeholder="¢"
             value={userQuery}
             onChange={(e) => setUserQuery(e.target.value)}
-            className="h-full bg-transparent border-none text-gray-300 placeholder:text-gray-500 font-mono pl-3 pr-4 flex-1 focus:outline-none focus:ring-0"
+            className="h-full flex-1 bg-transparent border-none text-gray-300 placeholder:text-gray-500 font-mono pl-3 pr-4 focus:outline-none focus:ring-0"
             onKeyPress={handleKeyPress}
           />
         </div>
