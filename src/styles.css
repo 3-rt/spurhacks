@@ -1452,4 +1452,152 @@ body {
 
 .pl-6 {
   padding-left: 1.5rem;
-} 
+}
+
+/* System Connectivity and Agent Status Animations */
+@keyframes connectivityPulse {
+  0% {
+    opacity: 0.4;
+    box-shadow: 0 0 5px currentColor;
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+  100% {
+    opacity: 0.4;
+    box-shadow: 0 0 5px currentColor;
+  }
+}
+
+@keyframes agentThinking {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.8;
+  }
+  25% {
+    transform: scale(1.1) rotate(-5deg);
+    opacity: 1;
+  }
+  75% {
+    transform: scale(1.1) rotate(5deg);
+    opacity: 1;
+  }
+}
+
+@keyframes agentWorking {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  25% {
+    transform: translateY(-4px) scale(1.05);
+  }
+  50% {
+    transform: translateY(0) scale(1);
+  }
+  75% {
+    transform: translateY(-2px) scale(1.02);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes successGlow {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.2);
+    box-shadow: 0 0 25px rgba(34, 197, 94, 0.8), 0 0 40px rgba(34, 197, 94, 0.3);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+  }
+}
+
+@keyframes errorShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-2px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes statusRipple {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Custom utility classes for system status */
+.connectivity-pulse {
+  animation: connectivityPulse 2s ease-in-out infinite;
+}
+
+.agent-thinking {
+  animation: agentThinking 2s ease-in-out infinite;
+}
+
+.agent-working {
+  animation: agentWorking 1s ease-in-out infinite;
+}
+
+.success-glow {
+  animation: successGlow 1.5s ease-in-out infinite;
+}
+
+.error-shake {
+  animation: errorShake 0.5s ease-in-out;
+}
+
+/* Status dot ripple effect */
+.status-dot {
+  position: relative;
+  overflow: visible;
+}
+
+.status-dot::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: currentColor;
+  opacity: 0.3;
+  animation: statusRipple 2s ease-out infinite;
+}
+
+/* Enhanced glow effects for different states */
+.glow-green {
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.5), 0 0 20px rgba(34, 197, 94, 0.3);
+}
+
+.glow-blue {
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5), 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+.glow-yellow {
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.5), 0 0 20px rgba(251, 191, 36, 0.3);
+}
+
+.glow-red {
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5), 0 0 20px rgba(239, 68, 68, 0.3);
+}
