@@ -188,7 +188,7 @@ async function createCOTAgent(stagehand: Stagehand, memoryContext: string = "", 
  */
 async function startBBSSession() {
   const sessionManager = new SessionManager();
-  const sessionId = await sessionManager.getOrCreateSession();
+  const { sessionId, isFirstTimeEver } = await sessionManager.getOrCreateSession();
   
   const browserbase = new Browserbase();
   const debugUrl = await browserbase.sessions.debug(sessionId);
@@ -207,6 +207,7 @@ async function startBBSSession() {
   return {
     sessionId: sessionId,
     debugUrl: debugUrl.debuggerFullscreenUrl,
+    isFirstTimeEver: isFirstTimeEver,
   };
 }
 
@@ -214,10 +215,12 @@ async function main({
     page,
     context,
     stagehand,
+    isFirstTimeEver,
 }: {
     page: Page; // Playwright Page with act, extract, and observe methods
     context: BrowserContext; // Playwright BrowserContext
     stagehand: Stagehand; // Stagehand instance
+    isFirstTimeEver: boolean;
 }) {
     try {
         // Initialize memory system
@@ -305,10 +308,19 @@ async function main({
         // Execute the enhanced query with the agent - this will generate real Stagehand logs
         emitStagehandOutput('execution_start', '🚀 Beginning task execution...', 'info');
         
-        // make it go to duckduckgo.com as default
-        await page.goto("https://duckduckgo.com");
+        // Only navigate to DuckDuckGo if this is the first time ever
+        if (isFirstTimeEver) {
+            emitStagehandOutput('first_time_setup', '🌐 Initializing browser with DuckDuckGo...', 'info');
+            await page.goto("https://duckduckgo.com");
+        } else {
+            emitStagehandOutput('session_continuation', '🔄 Continuing from previous session...', 'info');
+        }
 
-        const result = await agent.execute(enhancedQuery);
+        const systemPrompt = `
+        ONLY use duckduckgo.com as a search engine, NEVER use google.com or any other search engine.
+        always try to end the task in a website and not a search result/search engine.
+        `
+        const result = await agent.execute(systemPrompt + enhancedQuery);
         
         // Emit completion COT event
         emitStagehandOutput("execution_complete", "Task execution completed successfully", "info");
@@ -399,7 +411,7 @@ async function main({
 /**
  * Initialize and run the main() function with BrowserBase session
  */
-async function runStagehand(sessionId?: string) {
+async function runStagehand(sessionId?: string, isFirstTimeEver: boolean = false) {
     const stagehand = new Stagehand({
         ...StagehandConfig,
         browserbaseSessionID: sessionId,
@@ -412,6 +424,7 @@ async function runStagehand(sessionId?: string) {
         page,
         context,
         stagehand,
+        isFirstTimeEver,
     });
     // await stagehand.close();
 
@@ -427,10 +440,10 @@ async function runStagehand(sessionId?: string) {
 async function run() {
     try {
         // Start a BrowserBase session with debug interface
-        const { sessionId, debugUrl } = await startBBSSession();
+        const { sessionId, debugUrl, isFirstTimeEver } = await startBBSSession();
         
         // Run Stagehand with the session ID
-        const result = await runStagehand(sessionId);
+        const result = await runStagehand(sessionId, isFirstTimeEver);
         
         return result;
     } catch (error) {

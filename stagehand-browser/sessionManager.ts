@@ -6,6 +6,7 @@ interface SessionData {
   sessionId: string;
   createdAt: string;
   lastUsed: string;
+  isFirstTimeEver: boolean;
 }
 
 class SessionManager {
@@ -47,6 +48,19 @@ class SessionManager {
       sessionId,
       createdAt: new Date().toISOString(),
       lastUsed: new Date().toISOString(),
+      isFirstTimeEver: false,
+    };
+    
+    this.currentSession = session;
+    await fs.writeFile(this.sessionFile, JSON.stringify(session, null, 2));
+  }
+
+  async saveFirstTimeSession(sessionId: string): Promise<void> {
+    const session: SessionData = {
+      sessionId,
+      createdAt: new Date().toISOString(),
+      lastUsed: new Date().toISOString(),
+      isFirstTimeEver: true,
     };
     
     this.currentSession = session;
@@ -69,7 +83,7 @@ class SessionManager {
     this.currentSession = null;
   }
 
-  async getOrCreateSession(): Promise<string> {
+  async getOrCreateSession(): Promise<{ sessionId: string; isFirstTimeEver: boolean }> {
     // Try to load existing session
     const existingSession = await this.loadSession();
     
@@ -78,7 +92,10 @@ class SessionManager {
       try {
         await this.browserbase.sessions.debug(existingSession.sessionId);
         await this.updateLastUsed();
-        return existingSession.sessionId;
+        return { 
+          sessionId: existingSession.sessionId, 
+          isFirstTimeEver: existingSession.isFirstTimeEver 
+        };
       } catch (error) {
         // Session is invalid, create a new one
         console.log("Existing session is invalid, creating new session");
@@ -86,13 +103,27 @@ class SessionManager {
       }
     }
 
+    // Check if this is the first time ever by looking for any session file
+    // If we can't load any session, it means this is the first time ever
+    const isFirstTimeEver = !existingSession;
+    
     // Create new session
     const session = await this.browserbase.sessions.create({
       projectId: process.env.BROWSERBASE_PROJECT_ID!,
     });
     
-    await this.saveSession(session.id);
-    return session.id;
+    if (isFirstTimeEver) {
+      console.log("🌐 First time ever - initializing with DuckDuckGo");
+      await this.saveFirstTimeSession(session.id);
+    } else {
+      console.log("🔄 Creating new session (not first time ever)");
+      await this.saveSession(session.id);
+    }
+    
+    return { 
+      sessionId: session.id, 
+      isFirstTimeEver: isFirstTimeEver 
+    };
   }
 
   getCurrentSessionId(): string | null {
