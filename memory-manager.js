@@ -261,209 +261,114 @@ class MemoryManager {
   }
 
   /**
-   * Enhance query using relevant memories
+   * Use Gemini to enhance a user query with memory and personal info context.
+   * This function also extracts and saves new personal information found in the query.
    */
-  async enhanceQueryWithMemories(userQuery, relevantMemories = []) {
-    if (relevantMemories.length === 0) {
-      console.log('No relevant memories found for enhancement');
-      return userQuery;
-    }
-
-    // Check if Google API key is available for Gemini enhancement
-    const apiKey = process.env.GOOGLE_API_KEY;
-    if (apiKey) {
-      try {
-        return await this.enhanceQueryWithGemini(userQuery, relevantMemories);
-      } catch (error) {
-        console.log('Gemini enhancement failed, using simple enhancement:', error.message);
-      }
-    }
-
-    // Simple enhancement based on most relevant memory
-    const mostRelevant = relevantMemories[0];
-    if (mostRelevant) {
-      console.log(`🎯 Using memory for enhancement: "${mostRelevant.description}"`);
-      
-      // Extract specific details that might be useful
-      let enhancedQuery = userQuery;
-      
-      if (mostRelevant.details) {
-        // Handle any type of details dynamically
-        const detailKeys = Object.keys(mostRelevant.details);
-        for (const key of detailKeys) {
-          const value = mostRelevant.details[key];
-          if (typeof value === 'string' && value.length > 0) {
-            // Create patterns to replace based on the detail type
-            const patterns = [
-              `same ${key}`,
-              `that ${key}`,
-              `the ${key}`,
-              key
-            ];
-            
-            for (const pattern of patterns) {
-              if (userQuery.toLowerCase().includes(pattern.toLowerCase())) {
-                enhancedQuery = enhancedQuery.replace(new RegExp(pattern, 'gi'), value);
-                break;
-              }
-            }
-          }
-        }
-      }
-      
-      // Handle time-based references
-      if (userQuery.toLowerCase().includes('yesterday')) {
-        enhancedQuery = enhancedQuery.replace(/yesterday/gi, 'recent');
-      }
-      
-      if (userQuery.toLowerCase().includes('last week')) {
-        enhancedQuery = enhancedQuery.replace(/last week/gi, 'recent');
-      }
-      
-      if (userQuery.toLowerCase().includes('previous')) {
-        enhancedQuery = enhancedQuery.replace(/previous/gi, 'recent');
-      }
-      
-      if (enhancedQuery !== userQuery) {
-        console.log(`✨ Enhanced query: "${userQuery}" → "${enhancedQuery}"`);
-        return enhancedQuery;
-      }
-    }
-    
-    return userQuery;
-  }
-
-  /**
-   * Enhance query using Gemini AI based on relevant memories
-   */
-  async enhanceQueryWithGemini(userQuery, relevantMemories = []) {
-    try {
-      // Import Google Generative AI (lazy import to avoid dependency issues)
-      const { GoogleGenerativeAI } = require('@google/generative-ai');
-      const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-      // Prepare memory context for Gemini
-      const memoryContext = relevantMemories.map(memory => {
+  async enhanceQueryWithMemories(userQuery, relevantMemories = [], personalInfoContext = "") {
+    // Create a detailed context string from memories
+    let memoryContext = "";
+    if (relevantMemories.length > 0) {
+      memoryContext = "PREVIOUS ACTIONS (MEMORY):\n";
+      for (const memory of relevantMemories) {
         const date = new Date(memory.timestamp).toLocaleDateString();
-        let context = `📅 ${date}: ${memory.description}`;
-        
-        // Add any details that might be useful
-        if (memory.details && typeof memory.details === 'object') {
-          const usefulDetails = Object.entries(memory.details)
-            .filter(([key, value]) => {
-              const skipKeys = ['timestamp', 'success', 'source', 'result'];
-              return !skipKeys.includes(key) && value && typeof value === 'string' && value.length > 0;
-            })
-            .map(([key, value]) => ` (${key}: ${value})`)
-            .join('');
-          
-          if (usefulDetails) {
-            context += usefulDetails;
-          }
+        memoryContext += `- On ${date}, you did: "${memory.description}"\n`;
+        if (memory.details && typeof memory.details === 'object' && Object.keys(memory.details).length > 0) {
+          const details = JSON.stringify(memory.details);
+          memoryContext += `  - Details: ${details.substring(0, 200)}...\n`;
         }
-        
-        return context;
-      }).join('\n');
+      }
+    }
 
-      const prompt = `
-You are a query enhancement and personal information extraction system. Given a user query and relevant past memories, you need to:
+    // Prepare a prompt for Gemini
+    const prompt = `
+      You are a query enhancement system. Your job is to:
+      1. Enhance the user's query to be more specific for a web automation agent, using their personal info and past actions for context.
+      2. Extract any new personal information mentioned in the original query.
 
-1. Create an enhanced query that incorporates specific details from the memories
-2. Extract any personal information mentioned in the query
+      EXISTING PERSONAL INFORMATION:
+      ${personalInfoContext || "No personal information is known."}
 
-USER QUERY: "${userQuery}"
+      ${memoryContext}
 
-RELEVANT MEMORIES:
-${memoryContext}
+      ORIGINAL QUERY: "${userQuery}"
 
-INSTRUCTIONS:
-1. If the user refers to "same", "yesterday", "last week", "previous", or similar time references, use the memory context to understand what they mean
-2. Replace vague references with specific details from memories
-3. Keep the enhanced query natural and actionable
-4. If no relevant memories, return the original query unchanged
-5. Focus on the most recent and relevant memory if multiple exist
-6. Use any details from the memory context to make the query more specific
+      INSTRUCTIONS:
+      - Use the existing personal info and past actions to make the query more specific. For example, if the query is "book a flight" and personal info includes a home city, enhance it to "book a flight from [Home City]".
+      - Identify and extract any NEW personal details from the ORIGINAL QUERY (e.g., names, emails, addresses, preferences).
 
-PERSONAL INFORMATION EXTRACTION:
-Extract any personal information mentioned in the query such as:
-- Names (first name, last name, full name)
-- Email addresses
-- Phone numbers
-- Addresses
-- Birth dates
-- Preferences (food, music, etc.)
-- Any other personal details
+      Respond with ONLY a valid JSON object in this exact format:
+      {
+        "enhancedQuery": "The enhanced, more specific query string",
+        "personalInfo": {
+          "key1": "value1",
+          "key2": "value2"
+        }
+      }
 
-OUTPUT FORMAT:
-You must respond with ONLY a valid JSON object in this exact format:
-{
-  "enhancedQuery": "the enhanced query string",
-  "personalInfo": {
-    "datum1": "value1",
-    "datum2": "value2"
-  }
-}
+      If no new personal information is found in the query, use an empty object for "personalInfo".
+      If the query cannot be meaningfully enhanced, return the original query in "enhancedQuery".
 
-Examples:
-- "My name is John Smith" → {"enhancedQuery": "My name is John Smith", "personalInfo": {"firstName": "John", "lastName": "Smith"}}
-- "Check the same stock" + memory of NVDA → {"enhancedQuery": "Check NVDA stock price", "personalInfo": {}}
-- "I like pizza" → {"enhancedQuery": "I like pizza", "personalInfo": {"foodPreference": "pizza"}}
+      RESPONSE:
+    `;
 
-IMPORTANT: Only include personal information that is explicitly mentioned or can be reasonably inferred. If no personal information is found, use an empty object for personalInfo.
-
-RESPONSE:`;
-
-      const result = await model.generateContent(prompt);
-      const responseText = result.response.text().trim();
+    try {
+      // Use dynamic import for node-fetch
+      const fetch = (await import('node-fetch')).default;
       
-      // Try to parse the JSON response
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        console.warn("⚠️ GEMINI_API_KEY not found. Cannot enhance query.");
+        return { enhancedQuery: userQuery, personalInfo: {} };
+      }
+      
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }]
+        })
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.error("❌ Error enhancing query with Gemini:", response.status, errorBody);
+        return { enhancedQuery: userQuery, personalInfo: {} }; // Fallback
+      }
+
+      const data = await response.json();
+      const responseText = data.candidates[0].content.parts[0].text.trim();
+      
+      // Parse the JSON response
       let parsedResponse;
       try {
-        // Handle markdown-wrapped JSON responses
         let jsonText = responseText;
-        if (responseText.includes('```json')) {
-          jsonText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        if (responseText.startsWith('```json')) {
+          jsonText = responseText.replace(/```json\n?/, '').replace(/```\n?/, '').trim();
         }
         parsedResponse = JSON.parse(jsonText);
-      } catch (parseError) {
-        console.log('Failed to parse Gemini response as JSON, using fallback:', parseError.message);
-        // Fallback: treat the entire response as enhanced query
-        parsedResponse = {
-          enhancedQuery: responseText,
-          personalInfo: {}
-        };
+      } catch (e) {
+        console.error("❌ Failed to parse JSON from Gemini response:", responseText);
+        return { enhancedQuery: userQuery, personalInfo: {} }; // Fallback
       }
 
-      // Validate the response structure
-      if (!parsedResponse.enhancedQuery) {
-        parsedResponse.enhancedQuery = userQuery;
-      }
-      if (!parsedResponse.personalInfo || typeof parsedResponse.personalInfo !== 'object') {
-        parsedResponse.personalInfo = {};
-      }
-
-      console.log(`🤖 Gemini enhanced query: "${parsedResponse.enhancedQuery}"`);
-      console.log(`👤 Extracted personal info:`, parsedResponse.personalInfo);
-
-      // Save personal information to profile if any was found
-      if (Object.keys(parsedResponse.personalInfo).length > 0) {
-        try {
+      // Save any newly extracted personal information
+      if (parsedResponse.personalInfo && Object.keys(parsedResponse.personalInfo).length > 0) {
           await this.personalProfileManager.updateProfile(parsedResponse.personalInfo);
-          console.log(`💾 Personal information saved to profile`);
-        } catch (profileError) {
-          console.error('❌ Error saving personal information:', profileError);
-        }
+        console.log(`💾 New personal information saved to profile:`, parsedResponse.personalInfo);
       }
 
+      console.log(`✅ Enhanced query: "${parsedResponse.enhancedQuery}"`);
       return parsedResponse;
       
     } catch (error) {
-      console.log('Gemini enhancement failed, returning original query:', error.message);
-      return {
-        enhancedQuery: userQuery,
-        personalInfo: {}
-      };
+      console.error("❌ Error in enhanceQueryWithMemories:", error);
+      return { enhancedQuery: userQuery, personalInfo: {} }; // Fallback
     }
   }
 

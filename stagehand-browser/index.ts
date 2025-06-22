@@ -106,8 +106,9 @@ function interceptStagehandLogs() {
 
 // Enhanced agent with COT logging
 async function createCOTAgent(stagehand: Stagehand, memoryContext: string = "", enhancedQuery: string = "", personalInfoContext: string = "") {
+  console.log(`\n\n\n\n\n\npersonalInfoContext: ${personalInfoContext}`);
   const agent = stagehand.agent({
-    instructions: `You are a helpful web assistant that can use a browser to complete any task the user requests.
+    instructions: `You are a helpful web assistant designed to act on a user's behalf. Your primary goal is to complete tasks accurately and efficiently, using the context provided.
     🧠 MEMORY SYSTEM: You have access to previous actions and information. The memory system finds relevant past actions based on word overlap with your current request.
     MEMORY CONTEXT:${memoryContext}
     ${personalInfoContext}
@@ -117,10 +118,11 @@ async function createCOTAgent(stagehand: Stagehand, memoryContext: string = "", 
     3.  When the MEMORY CONTEXT is relevant, always use the PERSONAL INFO CONTEXT as well, especially for tasks involving personal details or preferences.
     4.  Use the ENHANCED QUERY if it provides a clearer goal. Otherwise, use the ORIGINAL QUERY but enrich it with insights from the memory and personal info contexts.
     5.  When navigating websites, be thorough. Use scrolling (up and down) to explore all content, find information, and reveal lazy-loaded elements.
-    6.  When dealing with forms:
-        - Identify and fill in ALL required fields.
-        - Use information from the PERSONAL INFO CONTEXT to complete the form accurately.
-        - After filling all necessary fields, locate and click the 'submit', 'continue', 'next', or similarly-named button to complete the submission.
+    6.  When dealing with forms, you MUST act as a personal assistant and follow these steps precisely:
+        - First, identify every single input field on the form (e.g., name, email, address, phone number).
+        - For EACH field, you MUST check if a corresponding value exists in the PERSONAL INFO CONTEXT.
+        - If a value for a field is in the personal profile, you MUST use that value to fill the field.
+        - After filling all fields for which you have information, locate and click the 'submit', 'continue', 'next', or similarly-named button to complete the form. Do not skip any fields for which you have information.
     7.  Use common web navigation actions like clicking buttons, links, and interactive elements, using search bars, and handling popups or modals.
     ORIGINAL QUERY: "${process.env.USER_QUERY || ''}"
     ENHANCED QUERY: "${enhancedQuery}"
@@ -231,21 +233,22 @@ async function main({
         if (relevantMemories.length > 0) {
             console.log(chalk.cyan(`🧠 Found ${relevantMemories.length} relevant memories with word overlap:`));
             
-            // Use the memory-based enhancement
-            const enhancementResult = await memoryManager.enhanceQueryWithMemories(userQuery, relevantMemories);
+            // Get personal information context
+            personalInfoContext = await memoryManager.getPersonalInfoContext();
+            if (personalInfoContext) {
+                const personalInfo = await memoryManager.getPersonalInfo();
+                console.log(chalk.blue(`👤 Personal profile loaded:`), personalInfo);
+            }
+
+            // Use the memory-based enhancement, now with personal info context
+            const enhancementResult = await memoryManager.enhanceQueryWithMemories(userQuery, relevantMemories, personalInfoContext);
             
-            // Handle the new response format
-            if (typeof enhancementResult === 'string') {
-                // Backward compatibility with old format
-                enhancedQuery = enhancementResult;
-            } else if (enhancementResult && typeof enhancementResult === 'object') {
-                // New format with enhancedQuery and personalInfo
-                enhancedQuery = enhancementResult.enhancedQuery || userQuery;
-                
-                // Log personal information if any was extracted
-                if (enhancementResult.personalInfo && Object.keys(enhancementResult.personalInfo).length > 0) {
-                    console.log(chalk.green(`👤 Personal information extracted:`, enhancementResult.personalInfo));
-                }
+            // The enhancement function now returns an object
+            enhancedQuery = enhancementResult.enhancedQuery || userQuery;
+            
+            // Log if any new personal information was extracted and saved
+            if (enhancementResult.personalInfo && Object.keys(enhancementResult.personalInfo).length > 0) {
+                console.log(chalk.green(`👤 New personal information was extracted from your query and saved.`, enhancementResult.personalInfo));
             }
             
             // Create memory context for the agent
@@ -257,10 +260,8 @@ async function main({
                 
                 // Extract any useful details from the memory dynamically
                 if (memory.details && typeof memory.details === 'object') {
-                    // Add any key-value pairs from details that might be useful
                     const usefulDetails = Object.entries(memory.details)
                         .filter(([key, value]) => {
-                            // Skip internal fields and focus on user-relevant information
                             const skipKeys = ['timestamp', 'success', 'source', 'result'];
                             return !skipKeys.includes(key) && value && typeof value === 'string' && value.length > 0;
                         })
@@ -277,13 +278,12 @@ async function main({
             console.log(chalk.cyan(memoryContext));
             console.log(chalk.green(`🔄 Enhanced query: "${enhancedQuery}"`));
         } else {
-            console.log(chalk.yellow("🧠 No relevant memories found for this query"));
-        }
-        
-        // Get personal information context
-        personalInfoContext = await memoryManager.getPersonalInfoContext();
-        if (personalInfoContext) {
-            console.log(chalk.blue(`👤 Personal profile context loaded`));
+            console.log(chalk.yellow("🧠 No relevant memories found for this query."));
+            // Even if no memories are found, we should still load personal info for the agent
+            personalInfoContext = await memoryManager.getPersonalInfoContext();
+            if (personalInfoContext) {
+                console.log(chalk.blue(`👤 Personal profile context loaded`));
+            }
         }
         
         interceptStagehandLogs();
