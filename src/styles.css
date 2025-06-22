@@ -21,6 +21,33 @@ html.fullscreen, body.fullscreen, #root.fullscreen {
   background: #000000;
 }
 
+/* Window dragging styles */
+[style*="WebkitAppRegion: drag"] {
+  -webkit-app-region: drag !important;
+  cursor: move !important;
+}
+
+[style*="WebkitAppRegion: no-drag"] {
+  -webkit-app-region: no-drag !important;
+  cursor: default !important;
+}
+
+/* Ensure buttons and interactive elements don't interfere with dragging */
+button, input, select, textarea {
+  -webkit-app-region: no-drag;
+}
+
+/* Additional drag region styles for better cross-platform support */
+.drag-region {
+  -webkit-app-region: drag;
+  cursor: move;
+}
+
+.no-drag-region {
+  -webkit-app-region: no-drag;
+  cursor: default;
+}
+
 /* Improved backdrop blur for better visual hierarchy */
 .backdrop-blur-sm {
   backdrop-filter: blur(4px);
@@ -869,6 +896,10 @@ body {
   overflow-y: auto;
 }
 
+.overflow-x-auto {
+  overflow-x: auto;
+}
+
 .relative {
   position: relative;
 }
@@ -886,7 +917,7 @@ body {
 }
 
 .min-w-0 {
-  min-width: 0px;
+  min-width: 0;
 }
 
 .max-w-md {
@@ -1146,6 +1177,24 @@ body {
   background: rgba(156, 163, 175, 0.5);
 }
 
+/* Custom scrollbar for ScrollArea component */
+[data-radix-scroll-area-viewport]::-webkit-scrollbar {
+  width: 6px;
+}
+
+[data-radix-scroll-area-viewport]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.3);
+  border-radius: 3px;
+}
+
+[data-radix-scroll-area-viewport]::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.5);
+}
+
 /* Layout specific styles */
 .flex-1.overflow-y-auto {
   flex: 1;
@@ -1284,4 +1333,111 @@ body {
   height: 2px;
   background: linear-gradient(90deg, transparent, #22c55e, transparent);
   animation: cotGlow 2s ease-in-out infinite;
+}
+
+/* Responsive sidebar utilities */
+/* Viewport width utilities for responsive sidebars */
+.w-\[20vw\] {
+  width: 20vw;
+}
+
+.w-\[25vw\] {
+  width: 25vw;
+}
+
+.min-w-\[280px\] {
+  min-width: 280px;
+}
+
+.min-w-\[320px\] {
+  min-width: 320px;
+}
+
+.max-w-\[400px\] {
+  max-width: 400px;
+}
+
+.max-w-\[500px\] {
+  max-width: 500px;
+}
+
+/* Full width and height utilities */
+.w-full {
+  width: 100%;
+}
+
+.h-full {
+  height: 100%;
+}
+
+.h-screen {
+  height: 100vh;
+}
+
+/* Overflow utilities for proper scrolling */
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.overflow-y-auto {
+  overflow-y: auto;
+}
+
+.overflow-x-auto {
+  overflow-x: auto;
+}
+
+/* Flex utilities for proper layout */
+.flex-shrink-0 {
+  flex-shrink: 0;
+}
+
+.min-h-0 {
+  min-height: 0;
+}
+
+/* Fixed width utilities for sidebars */
+.w-80 {
+  width: 20rem; /* 320px */
+}
+
+.min-w-80 {
+  min-width: 20rem; /* 320px */
+}
+
+.max-w-80 {
+  max-width: 20rem; /* 320px */
+}
+
+.w-96 {
+  width: 24rem; /* 384px */
+}
+
+.min-w-96 {
+  min-width: 24rem; /* 384px */
+}
+
+.max-w-96 {
+  max-width: 24rem; /* 384px */
+}
+
+/* Padding utilities for specific layouts */
+.pl-4 {
+  padding-left: 1rem;
+}
+
+.pr-0 {
+  padding-right: 0;
+}
+
+.pt-4 {
+  padding-top: 1rem;
+}
+
+.pb-4 {
+  padding-bottom: 1rem;
+}
+
+.pl-6 {
+  padding-left: 1.5rem;
 } 

@@ -27,23 +27,23 @@ function AgentDashboard() {
   }, []);
 
   return (
-    <div className="flex h-full bg-black text-gray-300">
-      {/* Left Sidebar */}
-      <div className="w-80 border-r border-gray-800 bg-gray-950/30 backdrop-blur-sm">
-        <div className="flex h-full flex-col">
-          <div className="p-6">
+    <div className="flex h-full bg-black text-gray-300 overflow-hidden">
+      {/* Left Sidebar - Fixed width with proper constraints */}
+      <div className="w-80 min-w-80 max-w-80 border-r border-gray-800 bg-gray-950/30 backdrop-blur-sm flex-shrink-0">
+        <div className="flex h-full flex-col overflow-hidden">
+          <div className="p-6 flex-shrink-0">
             <AgentStats />
           </div>
-          <div className="flex-1 flex">
+          <div className="flex-1 overflow-hidden">
             <OperationsList />
           </div>
         </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <div className="h-16 border-b border-gray-800 bg-gray-950/30 backdrop-blur-sm flex items-center justify-between px-8">
+        <div className="h-16 border-b border-gray-800 bg-gray-950/30 backdrop-blur-sm flex items-center justify-between px-8 flex-shrink-0">
           <h1 className="text-2xl font-bold font-mono text-gray-100">Agent Monitor</h1>
           <div className="text-sm text-gray-400 flex items-center gap-3 font-mono">
             <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
@@ -55,14 +55,14 @@ function AgentDashboard() {
         </div>
 
         {/* Browser Window */}
-        <div className="flex-1 p-2 flex items-center justify-center">
+        <div className="flex-1 p-2 flex items-center justify-center overflow-hidden">
           <BrowserWindow url={debugUrl || browserUrl} />
         </div>
       </div>
 
-      {/* Right Sidebar - COT Stream */}
-      <div className="w-96 border-l border-gray-800 bg-gray-950/30 backdrop-blur-sm">
-        <div className="h-full p-6">
+      {/* Right Sidebar - Fixed width with proper constraints */}
+      <div className="w-96 min-w-96 max-w-96 border-l border-gray-800 bg-gray-950/30 backdrop-blur-sm flex-shrink-0">
+        <div className="h-full overflow-hidden">
           <AgentCOTStream />
         </div>
       </div>
