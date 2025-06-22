@@ -1,6 +1,7 @@
 import { Stagehand, Page, BrowserContext } from "@browserbasehq/stagehand";
 import { Browserbase } from "@browserbasehq/sdk";
 import StagehandConfig from "./stagehand.config.js";
+import SessionManager from "./sessionManager.js";
 import chalk from "chalk";
 import boxen from "boxen";
 import path from "path";
@@ -186,17 +187,25 @@ async function createCOTAgent(stagehand: Stagehand, memoryContext: string = "", 
  * Start a BrowserBase session with debug interface
  */
 async function startBBSSession() {
-  const browserbase = new Browserbase();
-  const session = await browserbase.sessions.create({
-    projectId: process.env.BROWSERBASE_PROJECT_ID!,
-  });
-  const debugUrl = await browserbase.sessions.debug(session.id);
+  const sessionManager = new SessionManager();
+  const sessionId = await sessionManager.getOrCreateSession();
   
-  emitStagehandOutput('session_created', `BrowserBase session created: ${session.id}`, 'info');
+  const browserbase = new Browserbase();
+  const debugUrl = await browserbase.sessions.debug(sessionId);
+  
+  // Check if this is a new session or existing one
+  const isNewSession = !sessionManager.getCurrentSessionId() || sessionManager.getCurrentSessionId() === sessionId;
+  
+  if (isNewSession) {
+    emitStagehandOutput('session_created', `BrowserBase session created: ${sessionId}`, 'info');
+  } else {
+    emitStagehandOutput('session_reused', `BrowserBase session reused: ${sessionId}`, 'info');
+  }
+  
   emitStagehandOutput('debug_url', `Debug URL: ${debugUrl.debuggerFullscreenUrl}`, 'info');
   
   return {
-    sessionId: session.id,
+    sessionId: sessionId,
     debugUrl: debugUrl.debuggerFullscreenUrl,
   };
 }
@@ -404,7 +413,7 @@ async function runStagehand(sessionId?: string) {
         context,
         stagehand,
     });
-    await stagehand.close();
+    // await stagehand.close();
 
     return result;
 }

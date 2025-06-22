@@ -20,10 +20,19 @@ const AgentCOTStream = () => {
   const scrollAreaRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const timeoutRef = useRef(null);
 
   useEffect(() => {
     // Initialize the Stagehand service when component mounts
     stagehandService.initialize().catch(console.error);
+    
+    // Cleanup function to clear timeout on unmount
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -87,6 +96,12 @@ const AgentCOTStream = () => {
           setCotEvents(prev => [event, ...prev]); // Prepend new events to top
           scrollToTop(); // Scroll to top instead of bottom
         } else if (data.type === "complete") {
+          console.log("AgentCOTStream: Received complete event, resetting execution state");
+          // Clear the timeout since we got the complete event
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+          }
           setIsStreaming(false);
           setIsExecuting(false);
         }
@@ -217,9 +232,17 @@ const AgentCOTStream = () => {
   const handleExecuteTask = async () => {
     if (!userQuery.trim() || isExecuting) return;
     
+    console.log("AgentCOTStream: Starting task execution");
     setIsExecuting(true);
     setCotEvents([]); // Clear previous events
     setCurrentStep(0);
+    
+    // Add a timeout fallback to ensure input gets re-enabled
+    timeoutRef.current = setTimeout(() => {
+      console.log("AgentCOTStream: Timeout fallback - resetting execution state");
+      setIsExecuting(false);
+      setIsStreaming(false);
+    }, 30000); // 30 second timeout
     
     try {
       // Execute the task using the Stagehand service
@@ -230,6 +253,7 @@ const AgentCOTStream = () => {
       
     } catch (error) {
       console.error('Task execution error:', error);
+      clearTimeout(timeoutRef.current); // Clear timeout on error
       const errorEvent = {
         type: "execution_error",
         content: `Error: ${error.message}`,
@@ -237,14 +261,17 @@ const AgentCOTStream = () => {
         timestamp: new Date().toISOString()
       };
       setCotEvents(prev => [errorEvent, ...prev]);
-    } finally {
+      // Reset execution state on error
       setIsExecuting(false);
       setIsStreaming(false);
     }
+    // Removed the finally block - execution state is now controlled by the 'complete' event
   };
 
   const handleKeyPress = (e) => {
+    console.log("AgentCOTStream: Key press event", e.key, "isExecuting:", isExecuting, "userQuery:", userQuery.trim());
     if (e.key === 'Enter' && !isExecuting && userQuery.trim()) {
+      console.log("AgentCOTStream: Executing task via Enter key");
       handleExecuteTask();
     }
   };
@@ -593,8 +620,10 @@ const AgentCOTStream = () => {
             placeholder="find me a yt vid on cows"
             value={userQuery}
             onChange={(e) => setUserQuery(e.target.value)}
-            className={`h-12 bg-gray-900 border-gray-700 text-gray-300 placeholder:text-gray-500 font-mono pr-20 ${
-              isExecuting ? 'opacity-50 cursor-not-allowed' : ''
+            className={`h-12 bg-gray-900 border-gray-700 text-gray-300 placeholder:text-gray-500 font-mono pr-20 transition-all duration-200 ${
+              isExecuting 
+                ? 'opacity-50 cursor-not-allowed' 
+                : 'hover:border-gray-600 focus:border-green-500 focus:ring-1 focus:ring-green-500/20'
             }`}
             // disabled={isExecuting}
             onKeyPress={handleKeyPress}
@@ -645,6 +674,13 @@ const AgentCOTStream = () => {
           <div className="flex items-center justify-center text-xs text-gray-400 font-mono mt-2">
             <Zap className="w-3 h-3 mr-1 text-yellow-500" />
             <span>Executing: "{userQuery}"</span>
+          </div>
+        )}
+        
+        {!isExecuting && !isStreaming && cotEvents.length > 0 && (
+          <div className="flex items-center justify-center text-xs text-green-400 font-mono mt-2">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            <span>Ready for new input</span>
           </div>
         )}
       </div>

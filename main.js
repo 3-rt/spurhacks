@@ -249,7 +249,7 @@ function createWindow() {
                   }
                   
                   // Important system events that should always be sent through (not processed by COT)
-                  const systemEvents = ['debug_url', 'session_created'];
+                  const systemEvents = ['debug_url', 'session_created', 'session_reused'];
                   
                   if (systemEvents.includes(parsed.data.type)) {
                     // Always send system events directly to frontend without COT processing
