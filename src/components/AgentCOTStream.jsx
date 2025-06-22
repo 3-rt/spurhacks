@@ -583,10 +583,7 @@ const AgentCOTStream = () => {
                     }
                   </p>
                   <p className="text-xs text-gray-600 mt-2">
-                    {showOnlyEnhanced 
-                      ? "Enter a task below to see Gemini-enhanced insights"
-                      : "Enter a task below to see real-time reasoning"
-                    }
+                    Enter a task below to see real-time reasoning
                   </p>
                 </div>
               ) : (

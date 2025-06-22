@@ -59,19 +59,19 @@ function BrowserWindow({ url = "https://ui.shadcn.com/charts" }) {
             <iframe 
               src={debugUrl} 
               className="w-full h-full border-0"
-              title="BrowserBase Debug Interface"
+              title="Hermes Browser Debug Interface"
             />
           ) : (
             <div className="h-full bg-black flex items-center justify-center">
               <div className="text-center space-y-2">
                 <Eye className="w-8 h-8 mx-auto text-gray-600" />
-                <h3 className="text-sm font-mono text-gray-300">Stagehand Agent Browser</h3>
+                <h3 className="text-sm font-mono text-gray-300">Hermes Agent Browser</h3>
                 <p className="text-xs text-gray-500 font-mono max-w-[250px]">
-                  BrowserBase debug interface will appear here when a session starts
+                  Hermes browser interface will appear here when a session starts
                 </p>
                 <div className="border border-gray-700 bg-gray-900/30 p-2 rounded">
                   <p className="text-xs text-gray-600 font-mono">
-                    <span className="text-gray-400">Status:</span> Waiting for BrowserBase session...
+                    <span className="text-gray-400">Status:</span> Waiting for Hermes session...
                   </p>
                 </div>
               </div>
