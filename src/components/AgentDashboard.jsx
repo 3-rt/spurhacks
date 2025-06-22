@@ -208,7 +208,7 @@ function AgentDashboard() {
             </div>
             <span className="text-sm font-mono text-gray-300">Hermes</span>
           </div>
-          <span className="text-xs font-mono text-gray-500 capitalize">
+          <span className="text-xs font-mono text-gray-500 capitalize" style={{ fontSize: '10px' }}>
             {systemStatus.stagehand}
           </span>
         </div>
@@ -221,7 +221,7 @@ function AgentDashboard() {
             </div>
             <span className="text-sm font-mono text-gray-300">Browser</span>
           </div>
-          <span className="text-xs font-mono text-gray-500 capitalize">
+          <span className="text-xs font-mono text-gray-500 capitalize" style={{ fontSize: '10px' }}>
             {systemStatus.browserbase}
           </span>
         </div>
@@ -234,7 +234,7 @@ function AgentDashboard() {
             </div>
             <span className="text-sm font-mono text-gray-300">Voice</span>
           </div>
-          <span className="text-xs font-mono text-gray-500 capitalize">
+          <span className="text-xs font-mono text-gray-500 capitalize" style={{ fontSize: '10px' }}>
             {systemStatus.groq}
           </span>
         </div>
@@ -247,7 +247,7 @@ function AgentDashboard() {
             </div>
             <span className="text-sm font-mono text-gray-300">Memory</span>
           </div>
-          <span className="text-xs font-mono text-gray-500 capitalize">
+          <span className="text-xs font-mono text-gray-500 capitalize" style={{ fontSize: '10px' }}>
             {systemStatus.memory}
           </span>
         </div>
