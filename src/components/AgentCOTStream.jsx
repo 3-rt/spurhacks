@@ -518,7 +518,7 @@ const AgentCOTStream = () => {
             {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
           </Button>
           <Input
-            placeholder="¢"
+            placeholder="Enter instructions here..."
             value={userQuery}
             onChange={(e) => setUserQuery(e.target.value)}
             className="h-full flex-1 bg-transparent border-none text-gray-300 placeholder:text-gray-500 font-mono pl-3 pr-4 focus:outline-none focus:ring-0"
